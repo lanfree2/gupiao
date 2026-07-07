@@ -109,11 +109,16 @@ async function submit() {
       body.channel_id = Number(channelSel.value)
     }
     const res = await api.createRec(body) as {
-      recommendation: { id: number; nodes: { status: string }[] }
-      fetch: { message: string; done: number }
+      id?: number
+      recommendation?: { id: number }
+      fetch?: { message: string; done: number }
+    }
+    const recId = res.recommendation?.id ?? res.id
+    if (!recId) {
+      throw new Error('保存成功但返回数据异常，请到「我的追踪」查看')
     }
     toast(res.fetch?.message || '已保存')
-    router.push(`/recommendations/${res.recommendation.id}`)
+    router.push(`/recommendations/${recId}`)
   } catch (e) {
     error.value = e instanceof Error ? e.message : '保存失败'
   } finally {
