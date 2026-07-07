@@ -22,14 +22,18 @@ const loading = ref(false)
 const lookupTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 const showNewChannel = computed(() => channelSel.value === NEW)
+const today = computed(() => new Date().toISOString().slice(0, 10))
 
 const timeline = computed(() =>
   periods.value.map((p) => {
     const d = new Date(recommendDate.value)
     d.setDate(d.getDate() + p.days)
-    return { label: p.label, days: p.days, due: d.toISOString().slice(0, 10) }
+    const due = d.toISOString().slice(0, 10)
+    return { label: p.label, days: p.days, due, ready: due <= today.value }
   }),
 )
+
+const hasPastNodes = computed(() => timeline.value.some((t) => t.ready))
 
 async function loadMeta() {
   const [chs, ps] = await Promise.all([
@@ -83,7 +87,7 @@ async function submit() {
       body.channel_id = Number(channelSel.value)
     }
     await api.createRec(body)
-    toast('已保存并开始追踪')
+    toast(hasPastNodes.value ? '已保存，历史节点行情已自动抓取' : '已保存并开始追踪')
     router.push('/tracking')
   } catch (e) {
     error.value = e instanceof Error ? e.message : '保存失败'
@@ -148,7 +152,9 @@ onMounted(loadMeta)
         <div class="card">
           <div class="card-head"><h3>追踪周期</h3></div>
           <div class="card-body">
-            <p style="color:var(--t2);font-size:13.5px;margin-bottom:14px;line-height:1.7">保存后系统将在以下节点自动抓取收盘价。</p>
+            <p style="color:var(--t2);font-size:13.5px;margin-bottom:14px;line-height:1.7">
+              保存后系统将在各节点到期日自动抓取收盘价。若推荐日期较早，已到期节点会<strong>立即抓取历史行情</strong>。
+            </p>
             <div class="node-tags">
               <span v-for="p in periods" :key="p.id" class="node-tag">{{ p.label }}（{{ p.days }}天）</span>
             </div>
@@ -163,7 +169,7 @@ onMounted(loadMeta)
                 <tr v-for="t in timeline" :key="t.label">
                   <td>{{ t.label }}</td>
                   <td class="mono">{{ t.due }}</td>
-                  <td class="dim">待追踪</td>
+                  <td :class="t.ready ? 'ready' : 'dim'">{{ t.ready ? '保存后立即抓取' : '待到期' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -171,7 +177,9 @@ onMounted(loadMeta)
         </div>
         <p v-if="error" class="error">{{ error }}</p>
         <div style="display:flex;gap:12px">
-          <button type="button" class="btn btn-primary" style="flex:1;justify-content:center" :disabled="loading" @click="submit">保存并开始追踪</button>
+          <button type="button" class="btn btn-primary" style="flex:1;justify-content:center" :disabled="loading" @click="submit">
+            {{ loading ? (hasPastNodes ? '保存并抓取历史行情…' : '保存中…') : '保存并开始追踪' }}
+          </button>
           <button type="button" class="btn btn-ghost" @click="router.push('/dashboard')">取消</button>
         </div>
       </div>

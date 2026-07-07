@@ -12,6 +12,7 @@ const rec = ref<RecommendationOut | null>(null)
 const loading = ref(true)
 const editing = ref(false)
 const saving = ref(false)
+const deleting = ref(false)
 const errorMsg = ref('')
 const formDate = ref('')
 const formPrice = ref('')
@@ -76,6 +77,21 @@ async function saveEdit() {
   }
 }
 
+async function deleteRec() {
+  if (!rec.value) return
+  if (!confirm(`确定删除「${rec.value.stock_name}」的推荐记录？删除后无法恢复。`)) return
+  deleting.value = true
+  errorMsg.value = ''
+  try {
+    await api.deleteRec(rec.value.id)
+    router.push(backPath.value)
+  } catch (e) {
+    errorMsg.value = e instanceof Error ? e.message : '删除失败'
+  } finally {
+    deleting.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -96,7 +112,10 @@ onMounted(load)
         </div>
         <div class="title-actions">
           <span v-if="!editing" class="meta">{{ rec.recommend_date }} · ¥{{ fmtPrice(rec.recommend_price) }}</span>
-          <button v-if="!editing" type="button" class="btn btn-sm btn-ghost" @click="startEdit">编辑</button>
+          <div v-if="!editing" class="title-btns">
+            <button type="button" class="btn btn-sm btn-ghost" @click="startEdit">编辑</button>
+            <button type="button" class="btn btn-sm btn-danger" :disabled="deleting" @click="deleteRec">删除</button>
+          </div>
         </div>
       </div>
 
@@ -185,6 +204,8 @@ onMounted(load)
         <div class="card-body"><p>{{ rec.reason }}</p></div>
       </div>
 
+      <div v-if="errorMsg && !editing" class="form-error page-error">{{ errorMsg }}</div>
+
       <RouterLink :to="backPath" class="btn btn-ghost">← 返回列表</RouterLink>
     </template>
   </div>
@@ -196,6 +217,13 @@ onMounted(load)
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+}
+.title-btns {
+  display: flex;
+  gap: 8px;
+}
+.page-error {
+  margin-bottom: 16px;
 }
 .edit-form {
   display: flex;

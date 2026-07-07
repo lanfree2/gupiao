@@ -261,8 +261,8 @@ def refetch_recommendation(rec_id: int, db: DbSession, admin: CurrentAdmin):
     rec = db.query(Recommendation).filter(Recommendation.id == rec_id).first()
     if not rec:
         raise HTTPException(404, "推荐记录不存在")
-    from app.services.tracking import process_due_nodes, reset_recommendation_nodes
+    from app.services.tracking import process_recommendation_due_nodes, reset_recommendation_nodes
 
     reset_count = reset_recommendation_nodes(db, rec_id)
-    result = process_due_nodes(db)
+    result = process_recommendation_due_nodes(db, rec_id)
     return {"reset_nodes": reset_count, **result}

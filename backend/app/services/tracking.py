@@ -59,6 +59,33 @@ def rebuild_tracking_nodes(db: Session, rec: Recommendation, user_id: int) -> No
     db.commit()
 
 
+def _apply_node_price(db: Session, node: TrackingNode) -> bool:
+    rec = node.recommendation
+    result = get_close_on_or_before(db, rec.stock_code, node.due_date)
+    if result is None:
+        node.status = NodeStatus.failed
+        node.error_message = "无法获取收盘价"
+        return False
+    close, _actual_date = result
+    pct = (close - rec.recommend_price) / rec.recommend_price * 100
+    node.close_price = close
+    node.pct_change = round(pct, 2)
+    node.status = NodeStatus.done
+    node.fetched_at = datetime.utcnow()
+    return True
+
+
+def _fetch_pending_nodes(db: Session, nodes: list[TrackingNode]) -> dict:
+    done, failed = 0, 0
+    for node in nodes:
+        if _apply_node_price(db, node):
+            done += 1
+        else:
+            failed += 1
+    db.commit()
+    return {"processed": len(nodes), "done": done, "failed": failed}
+
+
 def process_due_nodes(db: Session, as_of: date | None = None) -> dict:
     today = as_of or date.today()
     nodes = (
@@ -67,24 +94,25 @@ def process_due_nodes(db: Session, as_of: date | None = None) -> dict:
         .filter(TrackingNode.status == NodeStatus.pending, TrackingNode.due_date <= today)
         .all()
     )
-    done, failed = 0, 0
-    for node in nodes:
-        rec = node.recommendation
-        result = get_close_on_or_before(db, rec.stock_code, node.due_date)
-        if result is None:
-            node.status = NodeStatus.failed
-            node.error_message = "无法获取收盘价"
-            failed += 1
-            continue
-        close, _actual_date = result
-        pct = (close - rec.recommend_price) / rec.recommend_price * 100
-        node.close_price = close
-        node.pct_change = round(pct, 2)
-        node.status = NodeStatus.done
-        node.fetched_at = datetime.utcnow()
-        done += 1
-    db.commit()
-    return {"processed": len(nodes), "done": done, "failed": failed}
+    return _fetch_pending_nodes(db, nodes)
+
+
+def process_recommendation_due_nodes(
+    db: Session, recommendation_id: int, as_of: date | None = None
+) -> dict:
+    """抓取某条推荐所有已到期节点的历史收盘价。"""
+    today = as_of or date.today()
+    nodes = (
+        db.query(TrackingNode)
+        .options(joinedload(TrackingNode.recommendation))
+        .filter(
+            TrackingNode.recommendation_id == recommendation_id,
+            TrackingNode.status == NodeStatus.pending,
+            TrackingNode.due_date <= today,
+        )
+        .all()
+    )
+    return _fetch_pending_nodes(db, nodes)
 
 
 def reset_recommendation_nodes(db: Session, recommendation_id: int) -> int:

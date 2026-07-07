@@ -6,7 +6,12 @@ from app.models import Channel, NodeStatus, Recommendation
 from app.schemas import ChannelIn, ChannelOut, ChannelStatsOut, MessageOut, RecommendationIn, RecommendationOut, RecommendationUpdateIn
 from app.services.market_data import lookup_stock_name
 from app.services.stats import collect_node_values, rec_to_out, stats_from_values
-from app.services.tracking import create_tracking_nodes, ensure_user_periods, rebuild_tracking_nodes
+from app.services.tracking import (
+    create_tracking_nodes,
+    ensure_user_periods,
+    process_recommendation_due_nodes,
+    rebuild_tracking_nodes,
+)
 
 router = APIRouter(prefix="/recommendations", tags=["推荐"])
 
@@ -108,6 +113,7 @@ def create_recommendation(body: RecommendationIn, user: CurrentUser, db: DbSessi
     db.flush()
     periods = ensure_user_periods(db, user.id)
     create_tracking_nodes(db, rec, periods)
+    process_recommendation_due_nodes(db, rec.id)
     db.refresh(rec)
     rec = load_rec(db, rec.id)
     return RecommendationOut(**rec_to_out(rec))
@@ -134,9 +140,22 @@ def update_recommendation(rec_id: int, body: RecommendationUpdateIn, user: Curre
     db.commit()
     if changed_tracking:
         rebuild_tracking_nodes(db, rec, user.id)
+        process_recommendation_due_nodes(db, rec.id)
 
     rec = load_rec(db, rec_id)
     return RecommendationOut(**rec_to_out(rec))
+
+
+@router.delete("/{rec_id}", response_model=MessageOut)
+def delete_recommendation(rec_id: int, user: CurrentUser, db: DbSession):
+    from app.services.stats import load_recommendation
+
+    rec = load_recommendation(db, rec_id, user.id)
+    if not rec:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    db.delete(rec)
+    db.commit()
+    return MessageOut(message="推荐记录已删除")
 
 
 def load_rec(db, rec_id):

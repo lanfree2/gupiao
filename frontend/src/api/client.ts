@@ -50,6 +50,7 @@ export const api = {
   getRec: (id: number) => api.get(`/recommendations/${id}`),
   createRec: (body: object) => api.post('/recommendations', body),
   updateRec: (id: number, body: object) => api.put(`/recommendations/${id}`, body),
+  deleteRec: (id: number) => api.delete(`/recommendations/${id}`),
   periods: () => api.get('/periods'),
   savePeriods: (body: object[]) => api.put('/periods', body),
   stockLookup: (code: string) => api.get(`/stocks/lookup?code=${code}`),
