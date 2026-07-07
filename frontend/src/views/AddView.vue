@@ -103,9 +103,12 @@ async function submit() {
     } else {
       body.channel_id = Number(channelSel.value)
     }
-    await api.createRec(body)
-    toast(hasPastNodes.value ? '已保存，历史节点行情已自动抓取' : '已保存并开始追踪')
-    router.push('/tracking')
+    const res = await api.createRec(body) as {
+      recommendation: { id: number; nodes: { status: string }[] }
+      fetch: { message: string; done: number }
+    }
+    toast(res.fetch?.message || '已保存')
+    router.push(`/recommendations/${res.recommendation.id}`)
   } catch (e) {
     error.value = e instanceof Error ? e.message : '保存失败'
   } finally {

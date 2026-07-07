@@ -191,3 +191,15 @@ class AdminChannelOut(BaseModel):
 
 class MessageOut(BaseModel):
     message: str
+
+
+class FetchResultOut(BaseModel):
+    processed: int = 0
+    done: int = 0
+    failed: int = 0
+    message: str = ""
+
+
+class RecommendationCreateOut(BaseModel):
+    recommendation: RecommendationOut
+    fetch: FetchResultOut

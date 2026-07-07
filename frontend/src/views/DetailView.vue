@@ -13,10 +13,12 @@ const loading = ref(true)
 const editing = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
-const errorMsg = ref('')
+const refetching = ref(false)
+const fetchMsg = ref('')
 const formDate = ref('')
 const formPrice = ref('')
 const formReason = ref('')
+const errorMsg = ref('')
 
 const backPath = computed(() => {
   const from = route.query.from as string
@@ -73,6 +75,7 @@ async function saveEdit() {
     if (price > 0) body.recommend_price = price
     rec.value = await api.updateRec(rec.value.id, body) as RecommendationOut
     editing.value = false
+    await refetchNodes(false)
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : '保存失败'
   } finally {
@@ -99,6 +102,23 @@ async function deleteRec() {
   }
 }
 
+async function refetchNodes(showConfirm = true) {
+  if (!rec.value || isAdminView.value) return
+  if (showConfirm && !confirm('重新抓取所有已到期节点的行情？')) return
+  refetching.value = true
+  fetchMsg.value = ''
+  errorMsg.value = ''
+  try {
+    const res = await api.refetchRec(rec.value.id) as { message: string }
+    fetchMsg.value = res.message
+    await load()
+  } catch (e) {
+    errorMsg.value = e instanceof Error ? e.message : '抓取失败'
+  } finally {
+    refetching.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -121,6 +141,13 @@ onMounted(load)
           <span v-if="!editing" class="meta">{{ rec.recommend_date }} · ¥{{ fmtPrice(rec.recommend_price) }}</span>
           <div v-if="!editing" class="title-btns">
             <button type="button" class="btn btn-sm btn-ghost" @click="startEdit">编辑</button>
+            <button
+              v-if="!isAdminView"
+              type="button"
+              class="btn btn-sm btn-ghost"
+              :disabled="refetching"
+              @click="refetchNodes()"
+            >{{ refetching ? '抓取中…' : '重新抓价' }}</button>
             <button type="button" class="btn btn-sm btn-danger" :disabled="deleting" @click="deleteRec">删除</button>
           </div>
         </div>
@@ -211,6 +238,7 @@ onMounted(load)
         <div class="card-body"><p>{{ rec.reason }}</p></div>
       </div>
 
+      <p v-if="fetchMsg && !editing" class="fetch-msg">{{ fetchMsg }}</p>
       <div v-if="errorMsg && !editing" class="form-error page-error">{{ errorMsg }}</div>
 
       <div class="detail-foot">
@@ -236,6 +264,11 @@ onMounted(load)
 }
 .page-error {
   margin-bottom: 16px;
+}
+.fetch-msg {
+  color: var(--t2);
+  font-size: 13px;
+  margin: 0 0 16px;
 }
 .detail-foot {
   display: flex;

@@ -281,3 +281,8 @@ def admin_delete_recommendation(rec_id: int, db: DbSession, admin: CurrentAdmin)
     db.delete(rec)
     db.commit()
     return MessageOut(message="推荐记录已删除")
+
+
+@router.post("/recommendations/{rec_id}/delete", response_model=MessageOut)
+def admin_delete_recommendation_post(rec_id: int, db: DbSession, admin: CurrentAdmin):
+    return admin_delete_recommendation(rec_id, db, admin)

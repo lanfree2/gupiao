@@ -17,7 +17,7 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
     const detail = data.detail
     const msg = Array.isArray(detail)
       ? detail.map((d: { msg?: string }) => d.msg).join('; ')
-      : detail || data.message || '请求失败'
+      : detail || data.message || res.statusText || `HTTP ${res.status}`
     throw new Error(msg)
   }
   return data as T
@@ -43,14 +43,15 @@ export const api = {
   channels: () => api.get('/channels'),
   createChannel: (body: object) => api.post('/channels', body),
   updateChannel: (id: number, body: object) => api.put(`/channels/${id}`, body),
-  deleteChannel: (id: number) => api.delete(`/channels/${id}`),
+  deleteChannel: (id: number) => api.post(`/channels/${id}/delete`),
   channelDetail: (id: number) => api.get(`/recommendations/channels/${id}/detail`),
   recommendations: (params?: string) => api.get(`/recommendations${params || ''}`),
   search: (q: string, scope: string) => api.get(`/recommendations/search?q=${encodeURIComponent(q)}&scope=${scope}`),
   getRec: (id: number) => api.get(`/recommendations/${id}`),
   createRec: (body: object) => api.post('/recommendations', body),
   updateRec: (id: number, body: object) => api.put(`/recommendations/${id}`, body),
-  deleteRec: (id: number) => api.delete(`/recommendations/${id}`),
+  deleteRec: (id: number) => api.post(`/recommendations/${id}/delete`),
+  refetchRec: (id: number) => api.post(`/recommendations/${id}/refetch`),
   periods: () => api.get('/periods'),
   savePeriods: (body: object[]) => api.put('/periods', body),
   stockLookup: (code: string) => api.get(`/stocks/lookup?code=${code}`),
@@ -76,7 +77,7 @@ export const api = {
     return api.get(`/admin/records${qs ? `?${qs}` : ''}`)
   },
   runWorker: () => api.post('/admin/worker/run'),
-  adminDeleteRec: (id: number) => api.delete(`/admin/recommendations/${id}`),
+  adminDeleteRec: (id: number) => api.post(`/admin/recommendations/${id}/delete`),
 }
 
 export function fmtPct(v: number | null | undefined) {

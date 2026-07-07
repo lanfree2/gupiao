@@ -3,7 +3,17 @@ from sqlalchemy.orm import joinedload
 
 from app.deps import CurrentUser, DbSession
 from app.models import Channel, NodeStatus, Recommendation, TrackingNode
-from app.schemas import ChannelIn, ChannelOut, ChannelStatsOut, MessageOut, RecommendationIn, RecommendationOut, RecommendationUpdateIn
+from app.schemas import (
+    ChannelIn,
+    ChannelOut,
+    ChannelStatsOut,
+    FetchResultOut,
+    MessageOut,
+    RecommendationCreateOut,
+    RecommendationIn,
+    RecommendationOut,
+    RecommendationUpdateIn,
+)
 from app.services.market_data import get_close_on_or_before, lookup_stock_name
 from app.services.stats import collect_node_values, rec_to_out, stats_from_values
 from app.services.tracking import (
@@ -11,6 +21,7 @@ from app.services.tracking import (
     ensure_user_periods,
     process_recommendation_due_nodes,
     rebuild_tracking_nodes,
+    reset_recommendation_nodes,
 )
 
 router = APIRouter(prefix="/recommendations", tags=["推荐"])
@@ -29,13 +40,39 @@ def _resolve_recommend_price(db: DbSession, stock_code: str, recommend_date, pri
 
 
 def _safe_fetch_nodes(db: DbSession, rec_id: int) -> dict:
-    try:
-        return process_recommendation_due_nodes(db, rec_id)
-    except Exception as exc:
-        import logging
+    import logging
 
-        logging.getLogger(__name__).exception("抓取行情失败 rec=%s: %s", rec_id, exc)
+    logger = logging.getLogger(__name__)
+    try:
+        result = process_recommendation_due_nodes(db, rec_id)
+        logger.info("抓取行情 rec=%s result=%s", rec_id, result)
+        return result
+    except Exception as exc:
+        logger.exception("抓取行情失败 rec=%s: %s", rec_id, exc)
         return {"processed": 0, "done": 0, "failed": 0, "error": str(exc)}
+
+
+def _fetch_result_out(raw: dict) -> FetchResultOut:
+    processed = int(raw.get("processed", 0))
+    done = int(raw.get("done", 0))
+    failed = int(raw.get("failed", 0))
+    if raw.get("error"):
+        message = f"抓取失败：{raw['error']}"
+    elif processed == 0:
+        message = "暂无到期节点。若推荐日期是今天，需等节点到期；补录历史请选较早日期"
+    elif failed:
+        message = f"已抓取 {done} 个节点，{failed} 个失败（可能停牌或网络问题）"
+    else:
+        message = f"已抓取 {done} 个节点行情"
+    return FetchResultOut(processed=processed, done=done, failed=failed, message=message)
+
+
+def _do_delete_recommendation(db: DbSession, rec: Recommendation) -> None:
+    db.query(TrackingNode).filter(TrackingNode.recommendation_id == rec.id).delete(
+        synchronize_session=False
+    )
+    db.delete(rec)
+    db.commit()
 
 
 @router.get("", response_model=list[RecommendationOut])
@@ -99,7 +136,7 @@ def get_recommendation(rec_id: int, user: CurrentUser, db: DbSession):
     return RecommendationOut(**rec_to_out(rec))
 
 
-@router.post("", response_model=RecommendationOut)
+@router.post("", response_model=RecommendationCreateOut)
 def create_recommendation(body: RecommendationIn, user: CurrentUser, db: DbSession):
     channel = None
     if body.channel_id:
@@ -137,10 +174,12 @@ def create_recommendation(body: RecommendationIn, user: CurrentUser, db: DbSessi
     db.flush()
     periods = ensure_user_periods(db, user.id)
     create_tracking_nodes(db, rec, periods)
-    _safe_fetch_nodes(db, rec.id)
-    db.refresh(rec)
+    fetch_raw = _safe_fetch_nodes(db, rec.id)
     rec = load_rec(db, rec.id)
-    return RecommendationOut(**rec_to_out(rec))
+    return RecommendationCreateOut(
+        recommendation=RecommendationOut(**rec_to_out(rec)),
+        fetch=_fetch_result_out(fetch_raw),
+    )
 
 
 @router.put("/{rec_id}", response_model=RecommendationOut)
@@ -177,12 +216,26 @@ def delete_recommendation(rec_id: int, user: CurrentUser, db: DbSession):
     rec = load_recommendation(db, rec_id, user.id)
     if not rec:
         raise HTTPException(status_code=404, detail="记录不存在")
-    db.query(TrackingNode).filter(TrackingNode.recommendation_id == rec_id).delete(
-        synchronize_session=False
-    )
-    db.delete(rec)
-    db.commit()
+    _do_delete_recommendation(db, rec)
     return MessageOut(message="推荐记录已删除")
+
+
+@router.post("/{rec_id}/delete", response_model=MessageOut)
+def delete_recommendation_post(rec_id: int, user: CurrentUser, db: DbSession):
+    """POST 删除（兼容部分环境拦截 DELETE 方法）。"""
+    return delete_recommendation(rec_id, user, db)
+
+
+@router.post("/{rec_id}/refetch", response_model=FetchResultOut)
+def refetch_recommendation(rec_id: int, user: CurrentUser, db: DbSession):
+    """重新抓取某条推荐所有已到期节点行情。"""
+    from app.services.stats import load_recommendation
+
+    rec = load_recommendation(db, rec_id, user.id)
+    if not rec:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    reset_recommendation_nodes(db, rec_id)
+    return _fetch_result_out(_safe_fetch_nodes(db, rec_id))
 
 
 def load_rec(db, rec_id):

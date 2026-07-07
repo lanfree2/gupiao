@@ -90,3 +90,9 @@ def delete_channel(channel_id: int, user: CurrentUser, db: DbSession):
     db.delete(ch)
     db.commit()
     return MessageOut(message="渠道已删除")
+
+
+@router.post("/{channel_id}/delete", response_model=MessageOut)
+def delete_channel_post(channel_id: int, user: CurrentUser, db: DbSession):
+    """POST 删除（兼容部分环境拦截 DELETE 方法）。"""
+    return delete_channel(channel_id, user, db)
