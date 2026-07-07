@@ -21,8 +21,11 @@ def stock_close(code: str, trade_date: str, db: DbSession):
         d = date.fromisoformat(trade_date)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="日期格式无效") from exc
-    result = get_close_on_or_before(db, code.strip(), d)
+    result = get_close_on_or_before(db, code.strip().zfill(6), d)
     if not result:
-        raise HTTPException(status_code=404, detail="无法获取该日收盘价")
+        raise HTTPException(
+            status_code=503,
+            detail="无法连接行情源（请检查服务器外网或代理设置），可手动填写价格",
+        )
     close, actual_date = result
     return {"code": code, "trade_date": str(actual_date), "close": close}

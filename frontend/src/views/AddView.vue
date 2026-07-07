@@ -72,8 +72,13 @@ watch([stockCode, recommendDate], () => {
       const res = await api.stockClose(code, recommendDate.value) as { close: number; trade_date: string }
       if (!recommendPrice.value) recommendPrice.value = String(res.close)
       priceHint.value = `推荐日(${res.trade_date})收盘价 ¥${res.close}，留空将自动使用`
-    } catch {
-      priceHint.value = '无法自动获取收盘价，请手动填写'
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : ''
+      if (msg.includes('代理') || msg.includes('行情源') || msg.includes('503')) {
+        priceHint.value = '行情接口暂时不可用（网络/代理问题），请手动填写价格'
+      } else {
+        priceHint.value = '该日期暂无收盘价数据，请选手动填写或更换日期'
+      }
     }
   }, 500)
 })
