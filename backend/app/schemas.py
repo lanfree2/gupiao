@@ -123,6 +123,12 @@ class RecommendationIn(BaseModel):
     reason: str = ""
 
 
+class RecommendationUpdateIn(BaseModel):
+    recommend_date: date | None = None
+    recommend_price: float | None = Field(default=None, gt=0)
+    reason: str | None = None
+
+
 class NodeOut(BaseModel):
     id: int
     label: str

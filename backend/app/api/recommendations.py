@@ -3,10 +3,10 @@ from sqlalchemy.orm import joinedload
 
 from app.deps import CurrentUser, DbSession
 from app.models import Channel, NodeStatus, Recommendation
-from app.schemas import ChannelIn, ChannelOut, ChannelStatsOut, MessageOut, RecommendationIn, RecommendationOut
+from app.schemas import ChannelIn, ChannelOut, ChannelStatsOut, MessageOut, RecommendationIn, RecommendationOut, RecommendationUpdateIn
 from app.services.market_data import lookup_stock_name
 from app.services.stats import collect_node_values, rec_to_out, stats_from_values
-from app.services.tracking import create_tracking_nodes, ensure_user_periods
+from app.services.tracking import create_tracking_nodes, ensure_user_periods, rebuild_tracking_nodes
 
 router = APIRouter(prefix="/recommendations", tags=["推荐"])
 
@@ -110,6 +110,32 @@ def create_recommendation(body: RecommendationIn, user: CurrentUser, db: DbSessi
     create_tracking_nodes(db, rec, periods)
     db.refresh(rec)
     rec = load_rec(db, rec.id)
+    return RecommendationOut(**rec_to_out(rec))
+
+
+@router.put("/{rec_id}", response_model=RecommendationOut)
+def update_recommendation(rec_id: int, body: RecommendationUpdateIn, user: CurrentUser, db: DbSession):
+    from app.services.stats import load_recommendation
+
+    rec = load_recommendation(db, rec_id, user.id)
+    if not rec:
+        raise HTTPException(status_code=404, detail="记录不存在")
+
+    changed_tracking = False
+    if body.recommend_date is not None and body.recommend_date != rec.recommend_date:
+        rec.recommend_date = body.recommend_date
+        changed_tracking = True
+    if body.recommend_price is not None and body.recommend_price != rec.recommend_price:
+        rec.recommend_price = body.recommend_price
+        changed_tracking = True
+    if body.reason is not None:
+        rec.reason = body.reason
+
+    db.commit()
+    if changed_tracking:
+        rebuild_tracking_nodes(db, rec, user.id)
+
+    rec = load_rec(db, rec_id)
     return RecommendationOut(**rec_to_out(rec))
 
 

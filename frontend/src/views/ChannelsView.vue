@@ -14,6 +14,9 @@ const editId = ref<number | null>(null)
 const formName = ref('')
 const formColor = ref('blue')
 const formDesc = ref('')
+const saving = ref(false)
+const deleting = ref(false)
+const errorMsg = ref('')
 
 const colors = ['blue', 'green', 'orange', 'purple', 'gray']
 
@@ -39,19 +42,44 @@ function openEdit(ch: ChannelStatsOut) {
   formName.value = ch.name
   formColor.value = ch.color
   formDesc.value = ch.description
+  errorMsg.value = ''
   showModal.value = true
 }
 
 async function saveChannel() {
   if (!formName.value.trim()) return
-  const body = { name: formName.value.trim(), color: formColor.value, description: formDesc.value }
-  if (editId.value) {
-    await api.updateChannel(editId.value, body)
-  } else {
-    await api.createChannel(body)
+  saving.value = true
+  errorMsg.value = ''
+  try {
+    const body = { name: formName.value.trim(), color: formColor.value, description: formDesc.value }
+    if (editId.value) {
+      await api.updateChannel(editId.value, body)
+    } else {
+      await api.createChannel(body)
+    }
+    showModal.value = false
+    await load()
+  } catch (e) {
+    errorMsg.value = e instanceof Error ? e.message : '保存失败'
+  } finally {
+    saving.value = false
   }
-  showModal.value = false
-  await load()
+}
+
+async function deleteChannel() {
+  if (!editId.value) return
+  if (!confirm('确定删除该渠道？仅无推荐记录的渠道可删除。')) return
+  deleting.value = true
+  errorMsg.value = ''
+  try {
+    await api.deleteChannel(editId.value)
+    showModal.value = false
+    await load()
+  } catch (e) {
+    errorMsg.value = e instanceof Error ? e.message : '删除失败'
+  } finally {
+    deleting.value = false
+  }
 }
 
 onMounted(load)
@@ -88,7 +116,9 @@ onMounted(load)
         </div>
         <div class="ch-foot">
           <span style="font-size:12px;color:var(--t3)">点击查看详细统计 →</span>
-          <span><button type="button" class="btn btn-sm btn-ghost" @click.stop="openEdit(ch)">编辑</button></span>
+          <span class="ch-actions">
+            <button type="button" class="btn btn-sm btn-ghost" @click.stop="openEdit(ch)">编辑</button>
+          </span>
         </div>
       </div>
       <button type="button" class="ch-add" @click="openCreate">
@@ -114,9 +144,18 @@ onMounted(load)
           <label>描述</label>
           <input v-model="formDesc" class="form-control">
         </div>
+        <p v-if="errorMsg" class="form-error">{{ errorMsg }}</p>
         <div class="modal-foot">
+          <button
+            v-if="editId"
+            type="button"
+            class="btn btn-danger"
+            :disabled="deleting || saving"
+            @click="deleteChannel"
+          >删除渠道</button>
+          <span style="flex:1" />
           <button type="button" class="btn btn-ghost" @click="showModal = false">取消</button>
-          <button type="button" class="btn btn-primary" @click="saveChannel">保存</button>
+          <button type="button" class="btn btn-primary" :disabled="saving || deleting" @click="saveChannel">保存</button>
         </div>
       </div>
     </div>

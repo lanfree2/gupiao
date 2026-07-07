@@ -10,6 +10,12 @@ const route = useRoute()
 const router = useRouter()
 const rec = ref<RecommendationOut | null>(null)
 const loading = ref(true)
+const editing = ref(false)
+const saving = ref(false)
+const errorMsg = ref('')
+const formDate = ref('')
+const formPrice = ref('')
+const formReason = ref('')
 
 const backPath = computed(() => {
   const from = route.query.from as string
@@ -22,8 +28,51 @@ async function load() {
   loading.value = true
   try {
     rec.value = await api.getRec(Number(route.params.id)) as RecommendationOut
+    resetForm()
   } finally {
     loading.value = false
+  }
+}
+
+function resetForm() {
+  if (!rec.value) return
+  formDate.value = rec.value.recommend_date
+  formPrice.value = String(rec.value.recommend_price)
+  formReason.value = rec.value.reason || ''
+}
+
+function startEdit() {
+  resetForm()
+  editing.value = true
+  errorMsg.value = ''
+}
+
+function cancelEdit() {
+  editing.value = false
+  errorMsg.value = ''
+  resetForm()
+}
+
+async function saveEdit() {
+  if (!rec.value) return
+  const price = Number(formPrice.value)
+  if (!formDate.value || !price || price <= 0) {
+    errorMsg.value = '请填写有效的推荐日期和价格'
+    return
+  }
+  saving.value = true
+  errorMsg.value = ''
+  try {
+    rec.value = await api.updateRec(rec.value.id, {
+      recommend_date: formDate.value,
+      recommend_price: price,
+      reason: formReason.value,
+    }) as RecommendationOut
+    editing.value = false
+  } catch (e) {
+    errorMsg.value = e instanceof Error ? e.message : '保存失败'
+  } finally {
+    saving.value = false
   }
 }
 
@@ -45,7 +94,34 @@ onMounted(load)
             <span class="tag" :style="{ '--tag-c': tagColor(rec.channel_color) }">{{ rec.channel_name }}</span>
           </div>
         </div>
-        <span class="meta">{{ rec.recommend_date }} · ¥{{ fmtPrice(rec.recommend_price) }}</span>
+        <div class="title-actions">
+          <span v-if="!editing" class="meta">{{ rec.recommend_date }} · ¥{{ fmtPrice(rec.recommend_price) }}</span>
+          <button v-if="!editing" type="button" class="btn btn-sm btn-ghost" @click="startEdit">编辑</button>
+        </div>
+      </div>
+
+      <div v-if="editing" class="card edit-card">
+        <div class="card-head"><h3>编辑推荐信息</h3></div>
+        <div class="card-body edit-form">
+          <div class="form-group">
+            <label>推荐日期</label>
+            <input v-model="formDate" type="date" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>推荐价格（元）</label>
+            <input v-model="formPrice" type="number" step="0.01" min="0.01" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>推荐理由</label>
+            <textarea v-model="formReason" class="form-control" rows="3" />
+          </div>
+          <p class="edit-hint">修改日期或价格后，追踪节点将自动重建并重新抓取。</p>
+          <p v-if="errorMsg" class="form-error">{{ errorMsg }}</p>
+          <div class="edit-actions">
+            <button type="button" class="btn btn-ghost" :disabled="saving" @click="cancelEdit">取消</button>
+            <button type="button" class="btn btn-primary" :disabled="saving" @click="saveEdit">保存</button>
+          </div>
+        </div>
       </div>
 
       <div class="card rail-card">
@@ -104,7 +180,7 @@ onMounted(load)
         </div>
       </div>
 
-      <div v-if="rec.reason" class="card">
+      <div v-if="rec.reason && !editing" class="card">
         <div class="card-head"><h3>推荐理由</h3></div>
         <div class="card-body"><p>{{ rec.reason }}</p></div>
       </div>
@@ -113,3 +189,32 @@ onMounted(load)
     </template>
   </div>
 </template>
+
+<style scoped>
+.title-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+}
+.edit-hint {
+  font-size: 12px;
+  color: var(--t3);
+  margin: 0;
+}
+.edit-actions {
+  display: flex;
+  gap: 8px;
+}
+.form-error {
+  color: var(--danger, #e53e3e);
+  font-size: 13px;
+  margin: 0;
+}
+</style>

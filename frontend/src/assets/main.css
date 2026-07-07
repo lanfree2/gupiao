@@ -118,6 +118,8 @@ a{cursor:pointer;color:var(--accent);text-decoration:none}
 .btn-primary:hover{background:var(--accent-strong)}
 .btn-ghost{background:var(--surface);border-color:var(--border-strong);color:var(--t2)}
 .btn-ghost:hover{border-color:var(--t3);color:var(--ink)}
+.btn-danger{background:#fee2e2;border-color:#fecaca;color:#b91c1c}
+.btn-danger:hover{background:#fecaca}
 .btn-sm{padding:5px 12px;font-size:12.5px;border-radius:7px}
 .btn-block{width:100%;justify-content:center;padding:13px}
 .login-box .btn-block{margin-top:6px}

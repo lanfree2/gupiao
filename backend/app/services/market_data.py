@@ -74,6 +74,18 @@ def lookup_stock_name(stock_code: str) -> str | None:
         return names.get(stock_code)
 
 
+def get_close_on_or_before(
+    db: Session, stock_code: str, trade_date: date, max_lookback: int = 10
+) -> tuple[float, date] | None:
+    """取到期日（或之前最近交易日）的收盘价。"""
+    for i in range(max_lookback + 1):
+        d = trade_date - timedelta(days=i)
+        close = get_close_price(db, stock_code, d)
+        if close is not None:
+            return close, d
+    return None
+
+
 def add_trading_days(start: date, n: int) -> date:
     """简化：按自然日加；生产可换交易日历表。"""
     return start + timedelta(days=n)

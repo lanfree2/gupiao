@@ -253,3 +253,16 @@ def trigger_worker(db: DbSession, admin: CurrentAdmin):
     from app.services.tracking import process_due_nodes
 
     return process_due_nodes(db)
+
+
+@router.post("/recommendations/{rec_id}/refetch")
+def refetch_recommendation(rec_id: int, db: DbSession, admin: CurrentAdmin):
+    """重置并重新抓取某条推荐的所有追踪节点。"""
+    rec = db.query(Recommendation).filter(Recommendation.id == rec_id).first()
+    if not rec:
+        raise HTTPException(404, "推荐记录不存在")
+    from app.services.tracking import process_due_nodes, reset_recommendation_nodes
+
+    reset_count = reset_recommendation_nodes(db, rec_id)
+    result = process_due_nodes(db)
+    return {"reset_nodes": reset_count, **result}

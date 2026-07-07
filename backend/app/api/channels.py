@@ -78,10 +78,15 @@ def get_channel(channel_id: int, user: CurrentUser, db: DbSession):
 
 
 @router.delete("/{channel_id}", response_model=MessageOut)
-def deactivate_channel(channel_id: int, user: CurrentUser, db: DbSession):
+def delete_channel(channel_id: int, user: CurrentUser, db: DbSession):
     ch = db.query(Channel).filter(Channel.id == channel_id, Channel.user_id == user.id).first()
     if not ch:
         raise HTTPException(status_code=404, detail="渠道不存在")
-    ch.is_active = False
+    count = db.query(Recommendation).filter(
+        Recommendation.user_id == user.id, Recommendation.channel_id == channel_id
+    ).count()
+    if count > 0:
+        raise HTTPException(status_code=400, detail=f"该渠道下有 {count} 条推荐记录，无法删除")
+    db.delete(ch)
     db.commit()
-    return MessageOut(message="渠道已停用")
+    return MessageOut(message="渠道已删除")
