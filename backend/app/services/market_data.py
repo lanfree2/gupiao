@@ -1,3 +1,4 @@
+import logging
 from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
@@ -6,6 +7,7 @@ from app.models import PriceCache
 from app.config import get_settings
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 def get_close_price(db: Session, stock_code: str, trade_date: date) -> float | None:
@@ -41,17 +43,31 @@ def _akshare_close(stock_code: str, trade_date: date) -> float | None:
     try:
         import akshare as ak
 
+        start = (trade_date - timedelta(days=15)).strftime("%Y%m%d")
+        end = trade_date.strftime("%Y%m%d")
         df = ak.stock_zh_a_hist(
             symbol=stock_code,
             period="daily",
-            start_date=trade_date.strftime("%Y%m%d"),
-            end_date=trade_date.strftime("%Y%m%d"),
+            start_date=start,
+            end_date=end,
             adjust="",
         )
         if df is None or df.empty:
             return None
-        return float(df.iloc[0]["收盘"])
-    except Exception:
+        col_date = "日期" if "日期" in df.columns else df.columns[0]
+        col_close = "收盘" if "收盘" in df.columns else df.columns[4]
+        df = df.copy()
+        df["_d"] = df[col_date].astype(str).str.slice(0, 10)
+        target = trade_date.isoformat()
+        hit = df[df["_d"] == target]
+        if not hit.empty:
+            return float(hit.iloc[-1][col_close])
+        before = df[df["_d"] <= target]
+        if before.empty:
+            return None
+        return float(before.iloc[-1][col_close])
+    except Exception as exc:
+        logger.warning("akshare 抓取失败 %s %s: %s", stock_code, trade_date, exc)
         return None
 
 

@@ -54,6 +54,8 @@ export const api = {
   periods: () => api.get('/periods'),
   savePeriods: (body: object[]) => api.put('/periods', body),
   stockLookup: (code: string) => api.get(`/stocks/lookup?code=${code}`),
+  stockClose: (code: string, tradeDate: string) =>
+    api.get(`/stocks/close?code=${encodeURIComponent(code)}&trade_date=${tradeDate}`),
 
   adminDashboard: () => api.get('/admin/dashboard'),
   adminStocks: (q?: string) => api.get(`/admin/stocks${q ? `?q=${encodeURIComponent(q)}` : ''}`),
@@ -74,6 +76,7 @@ export const api = {
     return api.get(`/admin/records${qs ? `?${qs}` : ''}`)
   },
   runWorker: () => api.post('/admin/worker/run'),
+  adminDeleteRec: (id: number) => api.delete(`/admin/recommendations/${id}`),
 }
 
 export function fmtPct(v: number | null | undefined) {

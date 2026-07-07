@@ -64,7 +64,7 @@ watch(q, () => load())
 
     <div v-if="loading" class="empty"><strong>加载中…</strong></div>
     <div v-else class="card only-table">
-      <RecTable :rows="filtered" from="tracking" empty-title="未找到记录" />
+      <RecTable :rows="filtered" from="tracking" empty-title="未找到记录" @deleted="load" />
     </div>
     <p class="foot-note">点击查看详情 · 红涨绿跌</p>
   </div>

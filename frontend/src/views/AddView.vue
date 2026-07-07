@@ -16,10 +16,12 @@ const channelSel = ref('')
 const newChannelName = ref('')
 const recommendDate = ref(new Date().toISOString().slice(0, 10))
 const recommendPrice = ref('')
+const priceHint = ref('')
 const reason = ref('')
 const error = ref('')
 const loading = ref(false)
-const lookupTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+const nameTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+const priceTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
 const showNewChannel = computed(() => channelSel.value === NEW)
 const today = computed(() => new Date().toISOString().slice(0, 10))
@@ -46,9 +48,9 @@ async function loadMeta() {
 }
 
 watch(stockCode, (code) => {
-  if (lookupTimer.value) clearTimeout(lookupTimer.value)
+  if (nameTimer.value) clearTimeout(nameTimer.value)
   if (!/^\d{6}$/.test(code.trim())) return
-  lookupTimer.value = setTimeout(async () => {
+  nameTimer.value = setTimeout(async () => {
     try {
       const res = await api.stockLookup(code.trim()) as { name?: string }
       stockName.value = res.name || '未知'
@@ -58,14 +60,28 @@ watch(stockCode, (code) => {
   }, 400)
 })
 
+watch([stockCode, recommendDate], () => {
+  if (priceTimer.value) clearTimeout(priceTimer.value)
+  const code = stockCode.value.trim()
+  if (!/^\d{6}$/.test(code) || !recommendDate.value) {
+    priceHint.value = ''
+    return
+  }
+  priceTimer.value = setTimeout(async () => {
+    try {
+      const res = await api.stockClose(code, recommendDate.value) as { close: number; trade_date: string }
+      if (!recommendPrice.value) recommendPrice.value = String(res.close)
+      priceHint.value = `推荐日(${res.trade_date})收盘价 ¥${res.close}，留空将自动使用`
+    } catch {
+      priceHint.value = '无法自动获取收盘价，请手动填写'
+    }
+  }, 500)
+})
+
 async function submit() {
   error.value = ''
   if (!stockCode.value.trim()) {
     error.value = '请输入股票代码'
-    return
-  }
-  if (!recommendPrice.value || Number(recommendPrice.value) <= 0) {
-    error.value = '请输入有效的推荐价格'
     return
   }
   if (channelSel.value === NEW && !newChannelName.value.trim()) {
@@ -78,9 +94,10 @@ async function submit() {
       stock_code: stockCode.value.trim(),
       stock_name: stockName.value,
       recommend_date: recommendDate.value,
-      recommend_price: Number(recommendPrice.value),
       reason: reason.value,
     }
+    const price = Number(recommendPrice.value)
+    if (price > 0) body.recommend_price = price
     if (channelSel.value === NEW) {
       body.new_channel_name = newChannelName.value.trim()
     } else {
@@ -138,7 +155,8 @@ onMounted(loadMeta)
             </div>
             <div class="form-group">
               <label>推荐价格（元）</label>
-              <input v-model="recommendPrice" class="form-control mono" inputmode="decimal">
+              <input v-model="recommendPrice" class="form-control mono" inputmode="decimal" placeholder="留空则自动取推荐日收盘价">
+              <p v-if="priceHint" class="form-hint">{{ priceHint }}</p>
             </div>
           </div>
           <div class="form-group">

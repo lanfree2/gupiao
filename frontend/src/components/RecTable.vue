@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { chipClass, fmtPct } from '@/api/client'
+import { api, chipClass, fmtPct } from '@/api/client'
 import { tagColor } from '@/utils/colors'
 import { fmtDateShort, fmtPrice } from '@/utils/format'
 import type { RecommendationOut } from '@/types/api'
@@ -11,6 +11,7 @@ const props = withDefaults(
     rows: RecommendationOut[]
     periods?: string[]
     showAction?: boolean
+    showDelete?: boolean
     from?: string
     emptyTitle?: string
     emptyDesc?: string
@@ -18,11 +19,14 @@ const props = withDefaults(
   {
     periods: () => [],
     showAction: true,
+    showDelete: true,
     from: 'tracking',
     emptyTitle: '暂无记录',
     emptyDesc: '',
   },
 )
+
+const emit = defineEmits<{ deleted: [] }>()
 
 const router = useRouter()
 
@@ -34,6 +38,16 @@ const nodeLabels = computed(() => {
 
 function openDetail(id: number) {
   router.push({ path: `/recommendations/${id}`, query: { from: props.from } })
+}
+
+async function deleteRow(row: RecommendationOut) {
+  if (!confirm(`确定删除「${row.stock_name}」？`)) return
+  try {
+    await api.deleteRec(row.id)
+    emit('deleted')
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '删除失败')
+  }
 }
 
 function chipAlpha(v: number | null | undefined) {
@@ -82,6 +96,11 @@ function chipAlpha(v: number | null | undefined) {
           </td>
           <td v-if="showAction" class="action">
             <button class="btn btn-sm btn-ghost" @click.stop="openDetail(row.id)">详情</button>
+            <button
+              v-if="showDelete && from !== 'admin'"
+              class="btn btn-sm btn-danger"
+              @click.stop="deleteRow(row)"
+            >删除</button>
           </td>
         </tr>
       </tbody>
@@ -98,3 +117,12 @@ function chipAlpha(v: number | null | undefined) {
     </table>
   </div>
 </template>
+
+<style scoped>
+.action {
+  white-space: nowrap;
+}
+.action .btn + .btn {
+  margin-left: 6px;
+}
+</style>

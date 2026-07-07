@@ -119,7 +119,7 @@ class RecommendationIn(BaseModel):
     channel_id: int | None = None
     new_channel_name: str | None = None
     recommend_date: date
-    recommend_price: float = Field(gt=0)
+    recommend_price: float | None = Field(default=None, gt=0)
     reason: str = ""
 
 

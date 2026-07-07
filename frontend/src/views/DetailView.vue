@@ -25,6 +25,8 @@ const backPath = computed(() => {
   return '/tracking'
 })
 
+const isAdminView = computed(() => route.query.from === 'admin')
+
 async function load() {
   loading.value = true
   try {
@@ -56,19 +58,20 @@ function cancelEdit() {
 
 async function saveEdit() {
   if (!rec.value) return
-  const price = Number(formPrice.value)
-  if (!formDate.value || !price || price <= 0) {
-    errorMsg.value = '请填写有效的推荐日期和价格'
+  if (!formDate.value) {
+    errorMsg.value = '请填写推荐日期'
     return
   }
   saving.value = true
   errorMsg.value = ''
   try {
-    rec.value = await api.updateRec(rec.value.id, {
+    const body: Record<string, unknown> = {
       recommend_date: formDate.value,
-      recommend_price: price,
       reason: formReason.value,
-    }) as RecommendationOut
+    }
+    const price = Number(formPrice.value)
+    if (price > 0) body.recommend_price = price
+    rec.value = await api.updateRec(rec.value.id, body) as RecommendationOut
     editing.value = false
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : '保存失败'
@@ -83,7 +86,11 @@ async function deleteRec() {
   deleting.value = true
   errorMsg.value = ''
   try {
-    await api.deleteRec(rec.value.id)
+    if (isAdminView.value) {
+      await api.adminDeleteRec(rec.value.id)
+    } else {
+      await api.deleteRec(rec.value.id)
+    }
     router.push(backPath.value)
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : '删除失败'
@@ -128,7 +135,7 @@ onMounted(load)
           </div>
           <div class="form-group">
             <label>推荐价格（元）</label>
-            <input v-model="formPrice" type="number" step="0.01" min="0.01" class="form-control">
+            <input v-model="formPrice" type="number" step="0.01" min="0.01" class="form-control" placeholder="留空则保持原价">
           </div>
           <div class="form-group">
             <label>推荐理由</label>
@@ -206,7 +213,12 @@ onMounted(load)
 
       <div v-if="errorMsg && !editing" class="form-error page-error">{{ errorMsg }}</div>
 
-      <RouterLink :to="backPath" class="btn btn-ghost">← 返回列表</RouterLink>
+      <div class="detail-foot">
+        <RouterLink :to="backPath" class="btn btn-ghost">← 返回列表</RouterLink>
+        <button v-if="!editing" type="button" class="btn btn-danger" :disabled="deleting" @click="deleteRec">
+          删除此推荐
+        </button>
+      </div>
     </template>
   </div>
 </template>
@@ -224,6 +236,12 @@ onMounted(load)
 }
 .page-error {
   margin-bottom: 16px;
+}
+.detail-foot {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 .edit-form {
   display: flex;
