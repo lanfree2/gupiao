@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>荐迹 · 股票推荐追踪</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>(function(){var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);})()</script>
+<style>
+[data-theme="light"]{
+  --bg:#eef0f4;--surface:#fff;--surface-2:#f7f8fa;
+  --border:#e2e5eb;--border-strong:#cfd4dd;
+  --ink:#151b2c;--t2:#4b5468;--t3:#8b92a3;
+  --accent:#1f3a9e;--accent-strong:#16307f;--accent-dim:rgba(31,58,158,.08);
+  --side-bg:#101a33;--side-ink:#dfe5f2;--side-dim:#7c88a6;--side-line:rgba(255,255,255,.08);
+  --up:#c93a2c;--up-rgb:201,58,44;--down:#0d7a55;--down-rgb:13,122,85;--warn:#a16207;
+  --shadow:0 1px 2px rgba(21,27,44,.05),0 6px 20px rgba(21,27,44,.06);
+  --shadow-lg:0 12px 40px rgba(21,27,44,.14);--overlay:rgba(21,27,44,.45);
+  --chart-grid:rgba(21,27,44,.09);--on-accent:#fff;
+}
+[data-theme="dark"]{
+  --bg:#0c0f17;--surface:#141926;--surface-2:#191f2e;
+  --border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);
+  --ink:#eef1f8;--t2:#a6adc0;--t3:#6a7284;
+  --accent:#7d97ff;--accent-strong:#a3b5ff;--accent-dim:rgba(125,151,255,.12);
+  --side-bg:#0a0d15;--side-ink:#dfe5f2;--side-dim:#6a7284;--side-line:rgba(255,255,255,.07);
+  --up:#ff6f5e;--up-rgb:255,111,94;--down:#3ecf9a;--down-rgb:62,207,154;--warn:#e2a336;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  --shadow-lg:0 18px 50px rgba(0,0,0,.55);--overlay:rgba(0,0,0,.65);
+  --chart-grid:rgba(255,255,255,.07);--on-accent:#0c0f17;
+}
+:root{--sidebar:248px;--r:10px;--r-sm:8px;
+  --serif:"Noto Serif SC",serif;--mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.65;min-height:100vh;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+a{cursor:pointer;color:var(--accent);text-decoration:none}
+.hidden{display:none!important}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.dim{color:var(--t3)}
+/* === 登录 === */
+.login-wrap{min-height:100vh;display:grid;grid-template-columns:1.05fr 1fr}
+.login-hero{background:var(--side-bg);color:var(--side-ink);padding:64px 60px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+.login-hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse at 20% 20%,black 20%,transparent 75%)}
+.login-hero-inner{position:relative;max-width:460px}
+.login-kicker{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:#9fb1e0;margin-bottom:26px;text-transform:uppercase}
+.login-hero h1{font-family:var(--serif);font-size:40px;font-weight:700;line-height:1.35;margin-bottom:18px;color:#fff}
+.login-hero h1 em{font-style:normal;color:#9fb1e0}
+.login-hero>.login-hero-inner p{font-size:15px;color:#9aa5c0;line-height:1.9;margin-bottom:44px}
+.login-feats{display:flex;flex-direction:column;border-top:1px solid var(--side-line)}
+.login-feat{display:flex;gap:16px;align-items:baseline;padding:18px 2px;border-bottom:1px solid var(--side-line)}
+.login-feat .no{font-family:var(--mono);font-size:12px;color:#5d6c94;flex-shrink:0}
+.login-feat strong{display:block;font-size:15px;color:#e8edf8;font-weight:500;margin-bottom:2px}
+.login-feat span{font-size:13px;color:#8d99b8}
+.login-panel{display:flex;align-items:center;justify-content:center;padding:48px 24px;background:var(--bg)}
+.login-box{width:100%;max-width:380px}
+.auth-brand{display:none;text-align:center;margin-bottom:24px}
+.auth-brand .bt{font-family:var(--serif);font-size:26px;font-weight:700}
+.auth-brand small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--t3);margin-top:2px}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:4px;margin-bottom:26px}
+.auth-tab{padding:9px;border:0;border-radius:6px;background:transparent;color:var(--t2);font-size:14px;font-weight:500;cursor:pointer}
+.auth-tab.active{background:var(--surface);color:var(--ink);box-shadow:var(--shadow);font-weight:700}
+.login-box h2{font-family:var(--serif);font-size:24px;font-weight:700;margin-bottom:6px}
+.login-box .sub{color:var(--t2);font-size:13.5px;margin-bottom:26px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:500;color:var(--t2);margin-bottom:7px}
+.field input{width:100%;padding:13px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-sm)}
+.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.code-row{display:flex;gap:10px}
+.code-row input{flex:1;min-width:0}
+.code-btn{flex-shrink:0;padding:0 16px;border-radius:var(--r-sm);border:1px solid var(--accent);background:var(--accent-dim);color:var(--accent);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+.code-btn:disabled{border-color:var(--border-strong);background:var(--surface-2);color:var(--t3);cursor:default}
+.agree{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--t2);margin:4px 0 8px;line-height:1.6}
+.agree input{margin-top:4px;accent-color:var(--accent);width:15px;height:15px;flex-shrink:0}
+.auth-switch{text-align:center;font-size:13px;color:var(--t3);margin-top:20px}
+.login-theme{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:24px;font-size:13px;color:var(--t2)}
+/* === 布局 === */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar);position:fixed;inset:0 auto 0 0;z-index:50;background:var(--side-bg);color:var(--side-ink);display:flex;flex-direction:column}
+.brand{padding:26px 22px 20px;border-bottom:1px solid var(--side-line)}
+.brand-title{font-family:var(--serif);font-size:19px;font-weight:700;color:#fff;letter-spacing:.02em}
+.brand small{display:block;margin-top:4px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--side-dim)}
+.nav{flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.nav-section{font-size:11px;letter-spacing:.14em;color:var(--side-dim);padding:8px 12px 6px;font-family:var(--mono)}
+.nav-link{display:flex;align-items:center;gap:11px;width:100%;padding:10px 12px;border:0;border-radius:var(--r-sm);background:transparent;color:#a9b3cc;font-size:14px;cursor:pointer;text-align:left;border-left:2px solid transparent}
+.nav-link svg{width:17px;height:17px;flex-shrink:0}
+.nav-link:hover{background:rgba(255,255,255,.05);color:#e8edf8}
+.nav-link.active{background:rgba(255,255,255,.07);color:#fff;border-left-color:var(--accent)}
+[data-theme="dark"] .nav-link.active{border-left-color:#7d97ff}
+.theme-switch{display:flex;align-items:center;gap:8px;margin:14px 12px 4px;padding:9px 12px;border-radius:var(--r-sm);background:rgba(255,255,255,.04);border:1px solid var(--side-line)}
+.theme-switch span{flex:1;font-size:12px;color:var(--side-dim)}
+.theme-toggle{position:relative;width:42px;height:23px;border-radius:999px;border:1px solid var(--side-line);background:rgba(0,0,0,.35);cursor:pointer;flex-shrink:0}
+.theme-toggle::after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#9fb1e0;transition:transform .22s ease}
+[data-theme="dark"] .theme-toggle::after{transform:translateX(19px);background:#7d97ff}
+.sidebar-foot{padding:16px 22px;border-top:1px solid var(--side-line);display:flex;align-items:center;gap:12px}
+.avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0}
+.avatar-info strong{display:block;font-size:13px;color:#e8edf8;font-weight:500}
+.avatar-info span{font-size:11px;color:var(--side-dim)}
+.side-disclaim{padding:0 22px 18px;font-size:11px;line-height:1.7;color:var(--side-dim)}
+.main{flex:1;margin-left:var(--sidebar);min-width:0}
+.main-inner{max-width:1180px;margin:0 auto;padding:36px 36px 64px}
+.page{display:none}.page.active{display:block;animation:pageIn .25s ease}
+@keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:26px}
+.topbar h2{font-family:var(--serif);font-size:26px;font-weight:700;letter-spacing:.01em}
+.topbar .desc{color:var(--t3);font-size:13px;margin-top:3px}
+.topbar-btns{display:flex;gap:10px;flex-wrap:wrap}
+/* 手机顶栏/底栏 */
+.mobile-top{display:none;position:sticky;top:0;z-index:55;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border)}
+.mobile-top .bt{font-family:var(--serif);font-size:18px;font-weight:700}
+.mobile-top .bt small{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--t3);font-weight:400;margin-left:8px}
+.mini-theme{padding:6px 12px;border-radius:999px;border:1px solid var(--border-strong);background:var(--surface);font-size:12px;color:var(--t2);cursor:pointer}
+.bottombar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;grid-template-columns:repeat(5,1fr);background:var(--surface);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,.06)}
+.bnav{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;padding:4px 0;border:0;background:none;color:var(--t3);font-size:10.5px;cursor:pointer}
+.bnav svg{width:22px;height:22px}
+.bnav.active{color:var(--accent);font-weight:700}
+.bnav-add-wrap{display:flex;align-items:flex-start;justify-content:center;position:relative}
+.bnav-add{width:50px;height:50px;border-radius:50%;border:0;cursor:pointer;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:center;transform:translateY(-16px);box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.bnav-add svg{width:24px;height:24px}
+.bnav-add-wrap span{position:absolute;bottom:calc(8px + env(safe-area-inset-bottom));font-size:10.5px;color:var(--t3)}
+.bnav-add-wrap.active span{color:var(--accent);font-weight:700}
+/* === 按钮 === */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:var(--r-sm);border:1px solid transparent;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s}
+.btn-primary{background:var(--accent);color:var(--on-accent)}
+.btn-primary:hover{background:var(--accent-strong)}
+.btn-ghost{background:var(--surface);border-color:var(--border-strong);color:var(--t2)}
+.btn-ghost:hover{border-color:var(--t3);color:var(--ink)}
+.btn-sm{padding:5px 12px;font-size:12.5px;border-radius:7px}
+.btn-block{width:100%;justify-content:center;padding:13px}
+.login-box .btn-block{margin-top:6px}
+/* === 统计卡 === */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+.stat.s-up::before{background:var(--up)}.stat.s-warn::before{background:var(--warn)}.stat.s-green::before{background:var(--down)}
+.stat .label{font-size:12.5px;color:var(--t3);display:block;margin-bottom:8px}
+.stat .num{font-family:var(--mono);font-size:28px;font-weight:600;line-height:1.1}
+.stat .num.up{color:var(--up)}.stat .num.warn{color:var(--warn)}.stat .num.green{color:var(--down)}
+.stat .foot{font-size:12px;color:var(--t3);margin-top:8px}
+/* === 卡片 / 表格 === */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:22px;overflow:hidden}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-bottom:1px solid var(--border)}
+.card-head h3{font-size:15px;font-weight:700}
+.card-head a{font-size:13px}
+.card-body{padding:20px 22px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;margin-bottom:22px}
+.grid-2>.card{margin-bottom:0}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;padding:10px 14px;font-size:11.5px;font-weight:500;color:var(--t3);letter-spacing:.06em;background:var(--surface-2);border-bottom:1px solid var(--border);white-space:nowrap}
+th.num,td.num-cell,td.price-cell{text-align:right}
+td{padding:11px 14px;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr[onclick]{cursor:pointer}
+tbody tr[onclick]:hover{background:var(--accent-dim)}
+.code{font-family:var(--mono);font-size:12.5px;color:var(--t2)}
+.price-cell{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px}
+td.action{text-align:right}
+.td-date{font-family:var(--mono);font-size:12.5px;color:var(--t2)}
+.chip{display:inline-block;min-width:60px;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:500;padding:3px 8px;border-radius:6px}
+.chip.up{color:var(--up);background:rgba(var(--up-rgb),var(--a,.1))}
+.chip.down{color:var(--down);background:rgba(var(--down-rgb),var(--a,.1))}
+.chip.flat{color:var(--t3)}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:500;background:var(--surface-2);border:1px solid var(--border);color:var(--t2)}
+.tag::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--tag-c,var(--t3));flex-shrink:0}
+.empty{text-align:center;padding:44px 20px;color:var(--t3);font-size:13.5px}
+.empty strong{display:block;font-size:15px;color:var(--t2);font-weight:500;margin-bottom:6px}
+/* 手机卡片 */
+.mcards{display:none;flex-direction:column;gap:12px}
+.mcard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);cursor:pointer}
+.mcard:active{background:var(--accent-dim)}
+.mcard-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.mcard-top .nm{font-size:15px;font-weight:700}.mcard-top .nm .code{margin-right:7px}
+.mcard-hero{font-family:var(--mono);font-size:17px;font-weight:600;flex-shrink:0}
+.mcard-hero.up{color:var(--up)}.mcard-hero.down{color:var(--down)}.mcard-hero.flat{color:var(--t3);font-size:13px;font-weight:400}
+.mcard-hero small{font-size:10.5px;font-weight:400;color:var(--t3);margin-right:5px;font-family:"Noto Sans SC",sans-serif}
+.mcard-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:7px 0 11px;font-size:12px;color:var(--t3)}
+.mcard-meta .mono{font-size:11.5px}
+.mcard-nodes{display:flex;gap:8px;border-top:1px dashed var(--border);padding-top:10px}
+.mini{flex:1;text-align:center;font-family:var(--mono);font-size:12.5px;font-weight:500}
+.mini i{display:block;font-style:normal;font-family:"Noto Sans SC",sans-serif;font-size:10.5px;color:var(--t3);font-weight:400;margin-bottom:1px}
+.mini.up{color:var(--up)}.mini.down{color:var(--down)}.mini.flat{color:var(--t3)}
+/* === 图表 === */
+.chart-box{height:180px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px;position:relative}
+.chart-box svg{width:100%;height:100%;overflow:visible}
+.legend{margin-top:12px;font-size:12px;color:var(--t3);display:flex;gap:18px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.bar-row{display:grid;grid-template-columns:80px 1fr 50px;gap:12px;align-items:center;margin-bottom:14px;font-size:13px}
+.bar-row:last-child{margin-bottom:0}
+.bar-row .pctv{font-family:var(--mono);text-align:right;color:var(--t2)}
+.bar{height:8px;border-radius:4px;background:var(--surface-2);border:1px solid var(--border);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:4px}
+/* === 表单 === */
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--t2);margin-bottom:7px}
+.form-control{width:100%;padding:12px 13px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-sm)}
+.form-control:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+textarea.form-control{min-height:88px;resize:vertical}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-hint{font-size:12px;color:var(--t3);margin-top:6px}
+.channel-new-field{margin-top:10px}
+.filters{display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.filters input,.filters select{padding:11px 13px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-sm);min-width:200px}
+.filters input:focus,.filters select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.node-tags{display:flex;flex-wrap:wrap;gap:8px}
+.node-tag{padding:7px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;font-family:var(--mono);color:var(--t2)}
+/* 搜索 */
+.search-hero{margin-bottom:20px}
+.search-hero input{width:100%;padding:14px 18px;font-size:15px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-sm);box-shadow:var(--shadow)}
+.search-hero input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.search-tabs{display:flex;gap:8px;margin-top:12px}
+.search-tab{padding:7px 16px;border-radius:999px;border:1px solid var(--border-strong);background:var(--surface);color:var(--t2);font-size:13px;cursor:pointer}
+.search-tab.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+/* 渠道卡 */
+.channel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.ch-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);border-top:3px solid var(--ch-color,var(--accent));padding:20px;box-shadow:var(--shadow);cursor:pointer;transition:box-shadow .15s}
+.ch-card:hover{box-shadow:var(--shadow-lg)}
+.ch-card .ch-name{font-size:16px;font-weight:700;margin-bottom:4px}
+.ch-card .ch-desc{font-size:13px;color:var(--t3);margin-bottom:12px;line-height:1.6;min-height:22px}
+.ch-card .ch-stats-row{display:flex;gap:18px;font-size:12.5px;color:var(--t2);margin-bottom:14px}
+.ch-card .ch-stats-row strong{font-family:var(--mono);color:var(--ink)}
+.ch-card .ch-stats-row .up{color:var(--up)}.ch-card .ch-stats-row .down{color:var(--down)}
+.ch-card .ch-foot{display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border);font-size:13px;color:var(--t2)}
+.ch-add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:150px;border:1.5px dashed var(--border-strong);border-radius:var(--r);color:var(--t3);cursor:pointer;background:transparent}
+.ch-add:hover{border-color:var(--accent);color:var(--accent)}
+.user-badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:12px;background:var(--surface-2);border:1px solid var(--border);color:var(--t2);white-space:nowrap}
+.user-badge.mine{background:var(--accent-dim);color:var(--accent);border-color:transparent;font-weight:500}
+.page-intro{color:var(--t2);font-size:14px;margin:-8px 0 24px;max-width:600px;line-height:1.75}
+/* === 管理后台 === */
+.sidebar.admin-side .brand-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.admin-pill{font-family:var(--mono);font-size:10px;letter-spacing:.12em;padding:3px 8px;border-radius:4px;background:rgba(226,163,54,.18);color:var(--warn);border:1px solid rgba(226,163,54,.25)}
+.admin-side .nav-link.active{border-left-color:var(--warn)}
+.admin-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.admin-channel-cell{display:flex;flex-direction:column;gap:3px}
+.admin-channel-cell .owner{font-size:11.5px;color:var(--t3)}
+.period-matrix{width:100%;border-collapse:collapse;font-size:13px}
+.period-matrix th,.period-matrix td{padding:10px 12px;border:1px solid var(--border);text-align:center}
+.period-matrix th{background:var(--surface-2);font-size:11.5px;color:var(--t3);font-weight:500}
+.period-matrix td:first-child,.period-matrix th:first-child{text-align:left;font-weight:500;color:var(--ink)}
+.period-matrix .pm-up{color:var(--up);font-family:var(--mono);font-weight:600}
+.period-matrix .pm-down{color:var(--down);font-family:var(--mono);font-weight:600}
+.period-matrix .pm-dim{color:var(--t3)}
+.admin-exit{margin-top:auto;padding:12px;border-top:1px solid var(--side-line)}
+.admin-exit button{width:100%;padding:9px 12px;border-radius:var(--r-sm);border:1px solid var(--side-line);background:rgba(255,255,255,.04);color:var(--side-dim);font-size:13px;cursor:pointer}
+.admin-exit button:hover{color:#fff;border-color:rgba(255,255,255,.2)}
+.login-admin-link{text-align:center;margin-top:18px;font-size:13px;color:var(--t3)}
+.login-admin-link a{color:var(--t2);font-weight:500}
+@media (max-width:1024px){
+  .admin-kpi-grid{grid-template-columns:1fr 1fr}
+  #screen-admin .bottombar{display:none}
+  #screen-admin .main{margin-left:0}
+  #screen-admin .sidebar{display:none}
+  #screen-admin .mobile-top{display:flex}
+}
+/* 详情 */
+.crumb{font-size:13px;color:var(--t3);margin-bottom:20px}
+.title-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.title-row h3{font-family:var(--serif);font-size:27px;font-weight:700}
+.detail-badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.meta{font-size:13.5px;color:var(--t2);font-family:var(--mono)}
+.rail-card{padding:28px 26px 20px}
+.rail{display:flex;position:relative;justify-content:space-between;gap:8px}
+.rail::before{content:"";position:absolute;top:6px;left:24px;right:24px;height:2px;background:var(--border-strong)}
+.rail-node{text-align:center;position:relative;flex:1}
+.rail-dot{width:14px;height:14px;border-radius:50%;margin:0 auto 12px;background:var(--surface);border:2.5px solid var(--border-strong);position:relative;z-index:1}
+.rail-node.done .rail-dot{background:var(--accent);border-color:var(--accent)}
+.rail-node .rl{font-size:12px;color:var(--t3)}.rail-node .rd{font-size:11px;color:var(--t3);font-family:var(--mono);margin-top:2px}
+.rail-node .rv{font-family:var(--mono);font-size:15px;font-weight:600;margin-top:4px}
+.rail-node .rv.up{color:var(--up)}.rail-node .rv.down{color:var(--down)}.rail-node .rv.pend{color:var(--t3);font-size:12px;font-weight:400}
+/* === 渠道详情页 === */
+.cd-header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:24px}
+.cd-color-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.cd-header h2{font-family:var(--serif);font-size:26px;font-weight:700}
+.cd-header .cd-desc{font-size:13.5px;color:var(--t3);width:100%}
+.period-table td:first-child{font-weight:500}
+/* === 周期设置弹窗 === */
+.period-list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;max-height:320px;overflow-y:auto}
+.period-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2)}
+.period-item input{width:60px;padding:6px 8px;font-family:var(--mono);text-align:center;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface)}
+.period-item .days-input{width:70px}
+.period-item .del-period{border:0;background:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0 4px}
+.period-item .del-period:hover{color:var(--up)}
+.add-period-row{display:flex;gap:10px;align-items:center}
+.add-period-row input{flex:1;padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface)}
+/* 弹窗 */
+.modal-bg{display:none;position:fixed;inset:0;background:var(--overlay);backdrop-filter:blur(4px);z-index:100;align-items:center;justify-content:center;padding:24px}
+.modal-bg.open{display:flex;animation:fadeIn .18s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--surface);border:1px solid var(--border-strong);border-radius:14px;width:440px;max-width:100%;padding:28px;box-shadow:var(--shadow-lg);animation:modalIn .22s ease;max-height:90vh;overflow-y:auto}
+@keyframes modalIn{from{opacity:0;transform:scale(.97) translateY(6px)}to{opacity:1;transform:none}}
+.modal h3{font-family:var(--serif);margin-bottom:22px;font-size:19px;font-weight:700}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:24px}
+.toast{position:fixed;bottom:28px;right:28px;z-index:200;background:var(--side-bg);color:#fff;padding:13px 20px;border-radius:var(--r-sm);font-size:13.5px;opacity:0;transform:translateY(12px);transition:.3s ease;pointer-events:none;box-shadow:var(--shadow-lg)}
+.toast.show{opacity:1;transform:none}
+.foot-note{font-size:12px;color:var(--t3);margin-top:12px}
+/* === 响应式 === */
+@media (max-width:1024px){
+  .login-wrap{grid-template-columns:1fr}.login-hero{display:none}.login-panel{align-items:flex-start;padding-top:56px;min-height:100vh}.auth-brand{display:block}
+  .sidebar{display:none}.main{margin-left:0}.mobile-top{display:flex}.bottombar{display:grid}
+  .main-inner{padding:18px 16px calc(96px + env(safe-area-inset-bottom))}
+  .table-wrap{display:none}.mcards{display:flex}
+  .card.only-table{border:0;background:transparent;box-shadow:none;overflow:visible}
+  .card.only-table>.card-head{background:transparent;border:0;padding:0 2px 12px}
+  .topbar{margin-bottom:18px}.topbar h2{font-size:22px}
+  .stats{grid-template-columns:1fr 1fr;gap:12px}.stat .num{font-size:24px}
+  .grid-2{grid-template-columns:1fr;gap:14px}.card{margin-bottom:14px}
+  .card-head{padding:14px 16px}.card-body{padding:16px}
+  .filters{gap:10px}.filters input,.filters select{flex:1;min-width:0;width:100%}
+  .channel-grid{grid-template-columns:1fr}.page-intro{margin-bottom:18px}
+  .rail{flex-wrap:wrap}.rail::before{display:none}.rail-node{flex:0 0 calc(33.3% - 6px);margin-bottom:14px}
+  .title-row h3{font-size:22px}
+  .cd-header h2{font-size:22px}
+}
+@media (max-width:640px){.form-row{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<!-- 登录/注册 -->
+<div id="screen-login" class="login-wrap">
+  <div class="login-hero"><div class="login-hero-inner">
+    <div class="login-kicker">JIANJI · TRACK EVERY CALL</div>
+    <h1>每一条荐股，<br>都留下<em>可验证的足迹</em></h1>
+    <p>把各个渠道的股票推荐录进来，系统自动追踪走势。时间久了，哪个消息来源靠谱，数据自己会说话。</p>
+    <div class="login-feats">
+      <div class="login-feat"><span class="no">01</span><div><strong>我的渠道分类</strong><span>按自己的消息来源建组，独立统计每个渠道的胜率</span></div></div>
+      <div class="login-feat"><span class="no">02</span><div><strong>多周期自动追踪</strong><span>自定义追踪周期，节点到期自动抓取涨跌幅</span></div></div>
+      <div class="login-feat"><span class="no">03</span><div><strong>渠道横向对比</strong><span>各渠道胜率、平均收益、历史走势一目了然</span></div></div>
+    </div>
+  </div></div>
+  <div class="login-panel"><div class="login-box">
+    <div class="auth-brand"><div class="bt">荐迹</div><small>推荐来源 · 走势验证</small></div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="showAuth('login')">登录</button>
+      <button class="auth-tab" id="tab-register" onclick="showAuth('register')">注册</button>
+    </div>
+    <div id="auth-login">
+      <h2>登录您的账户</h2>
+      <p class="sub">管理推荐记录与渠道分析</p>
+      <div class="field"><label>手机号</label><input type="tel" value="138****8888" id="login-user"></div>
+      <div class="field"><label>密码</label><input type="password" value="******" id="login-pass"></div>
+      <button class="btn btn-primary btn-block" onclick="doLogin()">进入系统</button>
+      <p class="auth-switch">还没有账号？<a onclick="showAuth('register')">立即注册</a></p>
+    </div>
+    <div id="auth-register" class="hidden">
+      <h2>创建新账户</h2>
+      <p class="sub">用手机号注册，一分钟开始追踪</p>
+      <div class="field"><label>手机号</label><input type="tel" placeholder="请输入 11 位手机号" id="reg-phone" maxlength="11"></div>
+      <div class="field"><label>短信验证码</label><div class="code-row"><input type="text" placeholder="6 位验证码" id="reg-code" maxlength="6"><button class="code-btn" id="reg-code-btn" onclick="sendCode()">获取验证码</button></div></div>
+      <div class="field"><label>设置密码</label><input type="password" placeholder="至少 6 位" id="reg-pass"></div>
+      <label class="agree"><input type="checkbox" id="reg-agree"><span>我已阅读并同意 <a onclick="event.preventDefault();toast('演示原型：协议页待补充')">《用户协议》</a> 与 <a onclick="event.preventDefault();toast('演示原型：协议页待补充')">《隐私政策》</a></span></label>
+      <button class="btn btn-primary btn-block" onclick="doRegister()">注册并进入</button>
+      <p class="auth-switch">已有账号？<a onclick="showAuth('login')">直接登录</a></p>
+    </div>
+    <div class="login-theme"><span id="login-theme-label">浅色模式</span><div class="theme-toggle" onclick="toggleTheme()"></div></div>
+    <p class="login-admin-link"><a onclick="showAuth('admin')">管理员入口 →</a></p>
+  </div></div>
+</div>
+
+<!-- 管理员登录 -->
+<div id="screen-admin-login" class="login-wrap hidden">
+  <div class="login-hero"><div class="login-hero-inner">
+    <div class="login-kicker">ADMIN · PLATFORM OVERVIEW</div>
+    <h1>全站数据<br><em>一览运营全貌</em></h1>
+    <p>查看所有用户的推荐记录、渠道分类与各周期历史业绩，用于平台运营分析与质量监控。</p>
+    <div class="login-feats">
+      <div class="login-feat"><span class="no">01</span><div><strong>全站股票</strong><span>按代码聚合，查看被推荐次数与各周期表现</span></div></div>
+      <div class="login-feat"><span class="no">02</span><div><strong>全站渠道</strong><span>用户 × 渠道维度，独立统计每个来源的业绩</span></div></div>
+      <div class="login-feat"><span class="no">03</span><div><strong>分周期业绩</strong><span>1周至3月各节点胜率、均收益、样本量</span></div></div>
+    </div>
+  </div></div>
+  <div class="login-panel"><div class="login-box">
+    <div class="auth-brand"><div class="bt">荐迹</div><small>管理后台</small></div>
+    <h2>管理员登录</h2>
+    <p class="sub">仅限平台运营人员访问</p>
+    <div class="field"><label>管理员账号</label><input type="text" value="admin" id="admin-user"></div>
+    <div class="field"><label>密码</label><input type="password" value="admin123" id="admin-pass"></div>
+    <button class="btn btn-primary btn-block" onclick="doAdminLogin()">进入管理后台</button>
+    <p class="auth-switch"><a onclick="showAuth('login')">← 返回用户登录</a></p>
+    <div class="login-theme"><span>浅色模式</span><div class="theme-toggle" onclick="toggleTheme()"></div></div>
+  </div></div>
+</div>
+
+<!-- 主应用 -->
+<div id="screen-app" class="layout hidden">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="brand-title">荐迹</div><small>推荐来源 · 走势验证</small></div>
+    <nav class="nav">
+      <div class="nav-section">主菜单</div>
+      <button class="nav-link active" data-route="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>总览</button>
+      <button class="nav-link" data-route="tracking"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>我的追踪</button>
+      <button class="nav-link" data-route="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>录入推荐</button>
+      <button class="nav-link" data-route="channels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>我的渠道</button>
+      <button class="nav-link" data-route="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>搜索</button>
+      <div class="theme-switch"><span id="sidebar-theme-label">浅色</span><div class="theme-toggle" onclick="toggleTheme()"></div></div>
+    </nav>
+    <div class="side-disclaim">本系统仅作个人信息记录与统计参考，不构成任何投资建议。</div>
+    <div class="sidebar-foot"><div class="avatar">李</div><div class="avatar-info"><strong>李先生</strong><span>普通用户</span></div></div>
+  </aside>
+  <main class="main">
+    <div class="mobile-top"><div class="bt">荐迹<small>推荐来源 · 走势验证</small></div><button class="mini-theme" onclick="toggleTheme()" id="mini-theme">☀ 浅色</button></div>
+    <div class="main-inner">
+
+      <!-- 总览 -->
+      <section id="page-dashboard" class="page active">
+        <div class="topbar"><div><h2>我的总览</h2><p class="desc">我录入的推荐与渠道表现</p></div><button class="btn btn-primary" onclick="go('add')">＋ 录入推荐</button></div>
+        <div class="stats">
+          <div class="stat"><span class="label">我的追踪</span><div class="num" id="stat-tracking">0</div><div class="foot">当前追踪中的推荐数</div></div>
+          <div class="stat"><span class="label">综合胜率</span><div class="num" id="stat-win">—</div><div class="foot">已到期节点中上涨占比</div></div>
+          <div class="stat s-up"><span class="label">平均收益</span><div class="num up" id="stat-avg">—</div><div class="foot">全部已到期节点均值</div></div>
+          <div class="stat s-warn"><span class="label">待到期节点</span><div class="num warn" id="stat-pending">0</div><div class="foot">到期后自动抓取收盘价</div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><h3>渠道胜率对比</h3></div><div class="card-body" id="dash-winrate"></div></div>
+          <div class="card"><div class="card-head"><h3>渠道平均收益对比</h3></div><div class="card-body" id="dash-avgret"></div></div>
+        </div>
+        <div class="card only-table"><div class="card-head"><h3>最近录入</h3><a onclick="go('tracking')">全部 →</a></div>
+          <div class="table-wrap"><table><thead><tr><th>代码</th><th>名称</th><th>渠道</th><th>推荐日</th><th class="num">推荐价</th><th class="num" id="th-d1">—</th><th class="num" id="th-d2">—</th><th class="num" id="th-d3">—</th></tr></thead><tbody id="dash-recent"></tbody></table></div>
+          <div class="mcards" id="dash-cards"></div>
+        </div>
+      </section>
+
+      <!-- 我的追踪 -->
+      <section id="page-tracking" class="page">
+        <div class="topbar"><div><h2>我的追踪</h2><p class="desc">我录入的全部推荐记录</p></div><button class="btn btn-primary" onclick="go('add')">＋ 录入推荐</button></div>
+        <div class="filters"><input type="text" placeholder="搜索代码 / 名称…" id="q" oninput="renderList()"><select id="f-ch" onchange="renderList()"><option value="">全部渠道</option></select><span class="dim" id="list-count"></span></div>
+        <div class="card only-table">
+          <div class="table-wrap"><table><thead><tr id="tracking-thead"></tr></thead><tbody id="list-body"></tbody></table></div>
+          <div class="mcards" id="list-cards"></div>
+        </div>
+        <p class="foot-note">点击查看详情 · 红涨绿跌</p>
+      </section>
+
+      <!-- 搜索（仅搜自己的） -->
+      <section id="page-search" class="page">
+        <div class="topbar"><div><h2>搜索</h2><p class="desc">在我的全部记录中搜索股票代码、名称或渠道</p></div></div>
+        <div class="search-hero">
+          <input type="text" id="my-q" placeholder="搜索代码、名称或渠道名…" oninput="renderSearch()">
+          <div class="search-tabs">
+            <button class="search-tab active" onclick="setSearchScope('all',this)">全部</button>
+            <button class="search-tab" onclick="setSearchScope('stock',this)">按股票</button>
+            <button class="search-tab" onclick="setSearchScope('channel',this)">按渠道</button>
+          </div>
+        </div>
+        <div class="card only-table"><div class="card-head"><h3 id="search-title">我的记录</h3></div>
+          <div class="table-wrap"><table><thead><tr id="search-thead"></tr></thead><tbody id="search-body"></tbody></table></div>
+          <div class="mcards" id="search-cards"></div>
+        </div>
+      </section>
+
+      <!-- 录入 -->
+      <section id="page-add" class="page">
+        <div class="topbar"><div><h2>录入推荐</h2><p class="desc">添加新的股票推荐并开始自动追踪</p></div></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><h3>基本信息</h3></div><div class="card-body">
+            <div class="form-group"><label>股票代码</label><input class="form-control mono" id="f-code" value="600519" oninput="matchName()" inputmode="numeric"></div>
+            <div class="form-group"><label>股票名称</label><input class="form-control" id="f-name" value="贵州茅台" readonly style="opacity:.6"></div>
+            <div class="form-group"><label>推荐渠道</label><select class="form-control" id="f-channel" onchange="onChannelPick()"></select><div class="channel-new-field hidden" id="f-channel-new-wrap"><input class="form-control" id="f-channel-new" placeholder="输入新渠道名称"><p class="form-hint">保存后自动创建</p></div></div>
+            <div class="form-row"><div class="form-group"><label>推荐日期</label><input class="form-control mono" type="date" id="f-date" value="2026-05-28" onchange="previewTimeline()"></div><div class="form-group"><label>推荐价格（元）</label><input class="form-control mono" id="f-price" value="1680.00" inputmode="decimal"></div></div>
+            <div class="form-group"><label>推荐理由</label><textarea class="form-control" id="f-reason">Q2 业绩超预期，渠道看好全年增长</textarea></div>
+          </div></div>
+          <div>
+            <div class="card"><div class="card-head"><h3>追踪周期</h3><a onclick="openPeriodModal()">⚙ 自定义周期</a></div><div class="card-body">
+              <p style="color:var(--t2);font-size:13.5px;margin-bottom:14px;line-height:1.7">保存后系统将在以下节点自动抓取收盘价。</p>
+              <div class="node-tags" id="period-tags"></div>
+            </div></div>
+            <div class="card"><div class="card-head"><h3>追踪时间表预览</h3></div><div style="padding:0 4px"><table><thead><tr><th>节点</th><th>预计日期</th><th>状态</th></tr></thead><tbody id="tl-preview"></tbody></table></div></div>
+            <div style="display:flex;gap:12px"><button class="btn btn-primary" style="flex:1;justify-content:center" onclick="saveRec()">保存并开始追踪</button><button class="btn btn-ghost" onclick="go('dashboard')">取消</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 渠道列表 -->
+      <section id="page-channels" class="page">
+        <div class="topbar"><div><h2>我的渠道</h2><p class="desc">管理您的消息来源分类 · 点击渠道卡片查看详细统计</p></div>
+          <div class="topbar-btns"><button class="btn btn-ghost" onclick="openPeriodModal()">⚙ 周期设置</button><button class="btn btn-primary" onclick="openChModal()">＋ 新建渠道</button></div>
+        </div>
+        <p class="page-intro">每张卡片展示该渠道的快速摘要，点击进入后可查看完整的统计分析。</p>
+        <div class="channel-grid" id="ch-grid"></div>
+      </section>
+
+      <!-- 渠道详情统计页 -->
+      <section id="page-ch-detail" class="page">
+        <div class="crumb"><a onclick="go('channels')">我的渠道</a> / <span id="cd-crumb">详情</span></div>
+        <div class="cd-header">
+          <div class="cd-color-dot" id="cd-dot"></div>
+          <h2 id="cd-name">—</h2>
+          <div class="cd-desc" id="cd-desc"></div>
+        </div>
+        <div class="stats" id="cd-stats"></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><h3>各周期胜率</h3></div><div class="card-body" id="cd-winrate"></div></div>
+          <div class="card"><div class="card-head"><h3>各周期平均收益</h3></div><div class="card-body" id="cd-avgret"></div></div>
+        </div>
+        <div class="card"><div class="card-head"><h3>历史推荐收益走势</h3><span class="dim" style="font-size:12px">按推荐时间排列，展示首个已完成周期的涨跌幅</span></div>
+          <div class="card-body"><div class="chart-box"><svg viewBox="0 0 500 180" preserveAspectRatio="none" id="cd-curve"></svg></div></div></div>
+        <div class="card only-table"><div class="card-head"><h3>该渠道全部推荐</h3></div>
+          <div class="table-wrap"><table><thead><tr id="cd-thead"></tr></thead><tbody id="cd-tbody"></tbody></table></div>
+          <div class="mcards" id="cd-cards"></div></div>
+        <button class="btn btn-ghost" onclick="go('channels')">← 返回渠道列表</button>
+      </section>
+
+      <!-- 个股详情 -->
+      <section id="page-detail" class="page">
+        <div class="crumb"><a id="crumb-back" onclick="goBackFromDetail()">返回</a> / <span id="crumb-name">详情</span></div>
+        <div class="title-row"><div><h3 id="d-title">—</h3><div class="detail-badge-row"><span class="user-badge mine" id="d-user">—</span><span class="tag" id="d-ch">—</span></div></div><span class="meta" id="d-meta">—</span></div>
+        <div class="card rail-card"><div class="rail" id="d-rail"></div></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><h3>涨跌幅走势</h3></div><div class="card-body"><div class="chart-box"><svg viewBox="0 0 400 160" preserveAspectRatio="none" id="d-chart"></svg></div></div></div>
+          <div class="card"><div class="card-head"><h3>节点明细</h3></div><div style="padding:0 4px;overflow-x:auto"><table><thead><tr><th>节点</th><th>日期</th><th class="num">收盘价</th><th class="num">涨跌幅</th><th>来源</th></tr></thead><tbody id="d-table"></tbody></table></div></div>
+        </div>
+        <div class="card"><div class="card-head"><h3>推荐理由</h3></div><div class="card-body"><p id="d-reason" style="color:var(--t2);line-height:1.85;font-size:14.5px"></p></div></div>
+        <button class="btn btn-ghost" onclick="goBackFromDetail()">← 返回</button>
+      </section>
+
+    </div>
+    <nav class="bottombar" id="bottombar">
+      <button class="bnav active" data-route="dashboard" onclick="go('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>总览</button>
+      <button class="bnav" data-route="tracking" onclick="go('tracking')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>追踪</button>
+      <div class="bnav-add-wrap" data-route="add" style="position:relative"><button class="bnav-add" onclick="go('add')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></button><span>录入</span></div>
+      <button class="bnav" data-route="channels" onclick="go('channels')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>渠道</button>
+      <button class="bnav" data-route="search" onclick="go('search')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>搜索</button>
+    </nav>
+  </main>
+</div>
+
+<!-- 管理后台 -->
+<div id="screen-admin" class="layout hidden">
+  <aside class="sidebar admin-side" id="admin-sidebar">
+    <div class="brand"><div class="brand-title">荐迹<span class="admin-pill">ADMIN</span></div><small>平台运营 · 全站数据</small></div>
+    <nav class="nav">
+      <div class="nav-section">数据中心</div>
+      <button class="nav-link active" data-admin-route="dashboard" onclick="adminGo('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>运营总览</button>
+      <button class="nav-link" data-admin-route="stocks" onclick="adminGo('stocks')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>全部股票</button>
+      <button class="nav-link" data-admin-route="channels" onclick="adminGo('channels')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>全部渠道</button>
+      <button class="nav-link" data-admin-route="records" onclick="adminGo('records')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>全部推荐</button>
+      <div class="admin-exit"><button onclick="exitAdmin()">退出管理后台</button></div>
+    </nav>
+    <div class="sidebar-foot"><div class="avatar" style="background:rgba(226,163,54,.2);color:#e2a336">管</div><div class="avatar-info"><strong>系统管理员</strong><span>平台运营</span></div></div>
+  </aside>
+  <main class="main">
+    <div class="mobile-top"><div class="bt">荐迹<small>管理后台</small></div><button class="mini-theme" onclick="toggleTheme()">☀</button></div>
+    <div class="main-inner">
+
+      <section id="admin-page-dashboard" class="page active">
+        <div class="topbar"><div><h2>运营总览</h2><p class="desc">全站用户推荐与渠道业绩汇总</p></div></div>
+        <div class="admin-kpi-grid" id="admin-kpis"></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><h3>渠道胜率 TOP（全周期均值）</h3></div><div class="card-body" id="admin-top-ch"></div></div>
+          <div class="card"><div class="card-head"><h3>热门股票（被推荐次数）</h3></div><div class="card-body" id="admin-top-stocks"></div></div>
+        </div>
+        <div class="card only-table"><div class="card-head"><h3>最近录入（全站）</h3><a onclick="adminGo('records')">全部 →</a></div>
+          <div class="table-wrap"><table><thead><tr><th>代码</th><th>名称</th><th>用户</th><th>渠道</th><th>推荐日</th><th class="num">推荐价</th><th class="num" id="adm-th1">—</th><th class="num" id="adm-th2">—</th><th class="num" id="adm-th3">—</th></tr></thead><tbody id="admin-recent"></tbody></table></div>
+        </div>
+      </section>
+
+      <section id="admin-page-stocks" class="page">
+        <div class="topbar"><div><h2>全部股票</h2><p class="desc">按股票代码聚合，查看全站推荐次数与各周期平均收益</p></div></div>
+        <div class="filters"><input type="text" placeholder="搜索代码 / 名称…" id="admin-stock-q" oninput="renderAdminStocks()"><span class="dim" id="admin-stock-count"></span></div>
+        <div class="card only-table">
+          <div class="table-wrap"><table><thead><tr id="admin-stocks-thead"></tr></thead><tbody id="admin-stocks-body"></tbody></table></div>
+        </div>
+        <p class="foot-note">点击行查看该股票下全部推荐记录 · 红涨绿跌</p>
+      </section>
+
+      <section id="admin-page-stock-detail" class="page">
+        <div class="crumb"><a onclick="adminGo('stocks')">全部股票</a> / <span id="asd-crumb">详情</span></div>
+        <div class="title-row"><div><h3 id="asd-title">—</h3><p class="desc" id="asd-meta" style="margin-top:6px"></p></div></div>
+        <div class="stats" id="asd-stats"></div>
+        <div class="card"><div class="card-head"><h3>各周期平均收益（全站样本）</h3></div><div class="card-body" id="asd-periods"></div></div>
+        <div class="card only-table"><div class="card-head"><h3>该股票全部推荐</h3></div>
+          <div class="table-wrap"><table><thead><tr id="asd-thead"></tr></thead><tbody id="asd-tbody"></tbody></table></div>
+        </div>
+        <button class="btn btn-ghost" onclick="adminGo('stocks')">← 返回股票列表</button>
+      </section>
+
+      <section id="admin-page-channels" class="page">
+        <div class="topbar"><div><h2>全部渠道</h2><p class="desc">用户 × 渠道名称维度 · 每人渠道独立统计</p></div></div>
+        <div class="filters">
+          <input type="text" placeholder="搜索用户 / 渠道名…" id="admin-ch-q" oninput="renderAdminChannels()">
+          <select id="admin-ch-user" onchange="renderAdminChannels()"><option value="">全部用户</option></select>
+          <span class="dim" id="admin-ch-count"></span>
+        </div>
+        <div class="channel-grid" id="admin-ch-grid"></div>
+      </section>
+
+      <section id="admin-page-ch-detail" class="page">
+        <div class="crumb"><a onclick="adminGo('channels')">全部渠道</a> / <span id="acd-crumb">详情</span></div>
+        <div class="cd-header">
+          <div class="cd-color-dot" id="acd-dot"></div>
+          <div style="flex:1">
+            <h2 id="acd-name">—</h2>
+            <div class="cd-desc" id="acd-desc"></div>
+            <div style="margin-top:8px" id="acd-user"></div>
+          </div>
+        </div>
+        <div class="stats" id="acd-stats"></div>
+        <div class="card"><div class="card-head"><h3>分周期历史业绩</h3><span class="dim" style="font-size:12px">胜率 · 平均收益 · 样本量</span></div>
+          <div class="card-body" style="overflow-x:auto"><table class="period-matrix" id="acd-matrix"></table></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><h3>各周期胜率</h3></div><div class="card-body" id="acd-winrate"></div></div>
+          <div class="card"><div class="card-head"><h3>各周期平均收益</h3></div><div class="card-body" id="acd-avgret"></div></div>
+        </div>
+        <div class="card"><div class="card-head"><h3>历史推荐收益走势</h3></div>
+          <div class="card-body"><div class="chart-box"><svg viewBox="0 0 500 180" preserveAspectRatio="none" id="acd-curve"></svg></div></div>
+        </div>
+        <div class="card only-table"><div class="card-head"><h3>该渠道全部推荐</h3></div>
+          <div class="table-wrap"><table><thead><tr id="acd-thead"></tr></thead><tbody id="acd-tbody"></tbody></table></div>
+        </div>
+        <button class="btn btn-ghost" onclick="adminGo('channels')">← 返回渠道列表</button>
+      </section>
+
+      <section id="admin-page-records" class="page">
+        <div class="topbar"><div><h2>全部推荐</h2><p class="desc">全站所有用户录入的推荐记录</p></div></div>
+        <div class="search-hero">
+          <input type="text" id="admin-rec-q" placeholder="搜索代码、名称、用户或渠道…" oninput="renderAdminRecords()">
+          <div class="search-tabs">
+            <button class="search-tab active" onclick="setAdminRecScope('all',this)">全部</button>
+            <button class="search-tab" onclick="setAdminRecScope('stock',this)">按股票</button>
+            <button class="search-tab" onclick="setAdminRecScope('channel',this)">按渠道</button>
+            <button class="search-tab" onclick="setAdminRecScope('user',this)">按用户</button>
+          </div>
+        </div>
+        <div class="card only-table"><div class="card-head"><h3 id="admin-rec-title">全站记录</h3></div>
+          <div class="table-wrap"><table><thead><tr id="admin-rec-thead"></tr></thead><tbody id="admin-rec-body"></tbody></table></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- 渠道编辑弹窗 -->
+<div class="modal-bg" id="ch-modal" onclick="if(event.target===this)closeChModal()"><div class="modal">
+  <h3 id="ch-modal-title">新建渠道</h3>
+  <div class="form-group"><label>名称</label><input class="form-control" id="m-name" placeholder="如：某投资群"></div>
+  <div class="form-group"><label>说明</label><input class="form-control" id="m-desc" placeholder="来源描述"></div>
+  <div class="form-group"><label>标识色</label><select class="form-control" id="m-color"><option value="blue">蓝色</option><option value="green">绿色</option><option value="orange">橙色</option><option value="purple">紫色</option><option value="gray">灰色</option></select></div>
+  <div class="modal-foot"><button class="btn btn-ghost" onclick="closeChModal()">取消</button><button class="btn btn-primary" id="ch-modal-save" onclick="saveChannel()">创建</button></div>
+</div></div>
+
+<!-- 周期设置弹窗 -->
+<div class="modal-bg" id="period-modal" onclick="if(event.target===this)closePeriodModal()"><div class="modal">
+  <h3>自定义追踪周期</h3>
+  <p style="color:var(--t2);font-size:13px;margin-bottom:18px;line-height:1.7">设置追踪节点，新录入的推荐将按此配置生成时间表。已有记录的周期不会被修改。</p>
+  <div class="period-list" id="period-list"></div>
+  <div class="add-period-row">
+    <input placeholder="名称（如：6月）" id="new-p-label">
+    <input placeholder="天数" id="new-p-days" type="number" min="1" style="width:80px">
+    <button class="btn btn-sm btn-ghost" onclick="addPeriod()">添加</button>
+  </div>
+  <div class="modal-foot"><button class="btn btn-primary" onclick="closePeriodModal()">完成</button></div>
+</div></div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const NAMES={'600519':'贵州茅台','300750':'宁德时代','002594':'比亚迪','601318':'中国平安'};
+const COLORS={blue:'#3b6fd4',green:'#0d9b6c',orange:'#d98218',purple:'#8b5cf6',gray:'#8b92a3'};
+const ME='我', NEW_CHANNEL='__new__';
+let editingChannelIndex=-1, searchScope='all', detailFrom='tracking', nextId=20, currentChDetail=null;
+
+/* ===== 自定义周期 ===== */
+let periods=[
+  {label:'1周',days:7},{label:'2周',days:14},{label:'1月',days:30},{label:'2月',days:60},{label:'3月',days:90}
+];
+
+/* ===== 主题 ===== */
+function getTheme(){return document.documentElement.getAttribute('data-theme')||'light'}
+function updateThemeUI(){
+  const dark=getTheme()==='dark';
+  const el=id=>document.getElementById(id);
+  if(el('sidebar-theme-label'))el('sidebar-theme-label').textContent=dark?'深色':'浅色';
+  if(el('login-theme-label'))el('login-theme-label').textContent=dark?'深色模式':'浅色模式';
+  if(el('mini-theme'))el('mini-theme').textContent=dark?'🌙 深色':'☀ 浅色';
+}
+function setTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('theme',t);updateThemeUI()}
+function toggleTheme(){setTheme(getTheme()==='light'?'dark':'light')}
+updateThemeUI();
+
+/* ===== 登录/注册 ===== */
+function showAuth(w){
+  document.getElementById('screen-login').classList.toggle('hidden',w!=='login'&&w!=='register');
+  document.getElementById('screen-admin-login').classList.toggle('hidden',w!=='admin');
+  document.getElementById('auth-login').classList.toggle('hidden',w!=='login');
+  document.getElementById('auth-register').classList.toggle('hidden',w!=='register');
+  document.getElementById('tab-login').classList.toggle('active',w==='login');
+  document.getElementById('tab-register').classList.toggle('active',w==='register');
+}
+let codeTimer=null;
+function sendCode(){
+  const p=document.getElementById('reg-phone').value.trim();
+  if(!/^1\d{10}$/.test(p))return toast('请输入正确的 11 位手机号');
+  const btn=document.getElementById('reg-code-btn');let s=60;btn.disabled=true;btn.textContent=`${s}s`;
+  toast('验证码已发送（演示原型，任意 6 位可用）');
+  clearInterval(codeTimer);codeTimer=setInterval(()=>{s--;if(s<=0){clearInterval(codeTimer);btn.disabled=false;btn.textContent='获取验证码'}else btn.textContent=`${s}s`},1000);
+}
+function doRegister(){
+  if(!/^1\d{10}$/.test(document.getElementById('reg-phone').value.trim()))return toast('请输入正确的手机号');
+  if(document.getElementById('reg-code').value.trim().length!==6)return toast('请输入 6 位验证码');
+  if(document.getElementById('reg-pass').value.length<6)return toast('密码至少 6 位');
+  if(!document.getElementById('reg-agree').checked)return toast('请先勾选同意用户协议');
+  toast('注册成功');setTimeout(doLogin,500);
+}
+function doLogin(){
+  document.getElementById('screen-login').classList.add('hidden');
+  document.getElementById('screen-admin-login').classList.add('hidden');
+  document.getElementById('screen-admin').classList.add('hidden');
+  document.getElementById('screen-app').classList.remove('hidden');
+  init();go('dashboard');
+}
+function doAdminLogin(){
+  const u=document.getElementById('admin-user').value.trim(),p=document.getElementById('admin-pass').value;
+  if(u!=='admin'||p!=='admin123')return toast('管理员账号或密码错误（演示：admin / admin123）');
+  document.getElementById('screen-login').classList.add('hidden');
+  document.getElementById('screen-admin-login').classList.add('hidden');
+  document.getElementById('screen-app').classList.add('hidden');
+  document.getElementById('screen-admin').classList.remove('hidden');
+  adminInit();adminGo('dashboard');
+}
+function exitAdmin(){
+  document.getElementById('screen-admin').classList.add('hidden');
+  document.getElementById('screen-login').classList.remove('hidden');
+  showAuth('login');
+  location.hash='';
+}
+
+/* ===== 数据 ===== */
+const USER_NAMES={'我':'李先生','王先生':'王先生','陈女士':'陈女士','刘先生':'刘先生','赵女士':'赵女士','周先生':'周先生'};
+
+let channels=[
+  {name:'微信群 A',color:'blue',desc:'某投资交流群'},
+  {name:'研报订阅',color:'green',desc:'券商月度研报'},
+  {name:'朋友推荐',color:'orange',desc:'私人好友分享'},
+  {name:'公众号',color:'purple',desc:'财经公众号'},
+];
+
+const allUserChannels={
+  '我':channels,
+  '王先生':[{name:'价值投资群',color:'green',desc:'长期价值讨论群'},{name:'研报订阅',color:'blue',desc:'券商研报推送'}],
+  '陈女士':[{name:'公众号精选',color:'purple',desc:'财经公众号摘录'}],
+  '刘先生':[{name:'牛散分享',color:'orange',desc:'短线牛散交流群'}],
+  '赵女士':[{name:'研报订阅',color:'green',desc:'机构研报订阅'}],
+  '周先生':[{name:'电视财经',color:'gray',desc:'财经节目推荐'}],
+};
+
+let records=[
+  {id:'r1',user:ME,code:'600519',name:'贵州茅台',ch:'研报订阅',date:'2026-05-28',price:1680,reason:'Q2 业绩超预期。',nodes:[{l:'1周',p:'+2.1%',d:'06-04',ok:1,c:1715.28},{l:'2周',p:'+3.5%',d:'06-11',ok:1,c:1738.8},{l:'1月',p:'+5.8%',d:'06-28',ok:1,c:1777.44},{l:'2月',p:'待到期',d:'07-28',ok:0},{l:'3月',p:'待到期',d:'08-28',ok:0}],chart:[0,2.1,3.5,5.8]},
+  {id:'r2',user:'王先生',code:'600519',name:'贵州茅台',ch:'价值投资群',date:'2026-05-10',price:1650,reason:'白酒龙头，长期逻辑未变。',nodes:[{l:'1周',p:'+3.0%',d:'05-17',ok:1,c:1699.5},{l:'2周',p:'+4.2%',d:'05-24',ok:1,c:1719.3},{l:'1月',p:'+7.1%',d:'06-10',ok:1,c:1767.2},{l:'2月',p:'—',d:'—',ok:0},{l:'3月',p:'—',d:'—',ok:0}],chart:[0,3,4.2,7.1]},
+  {id:'r3',user:'陈女士',code:'600519',name:'贵州茅台',ch:'公众号精选',date:'2026-04-20',price:1580,reason:'一季报超预期。',nodes:[{l:'1周',p:'+1.5%',d:'04-27',ok:1,c:1603.7},{l:'2周',p:'+2.8%',d:'05-04',ok:1,c:1624.2},{l:'1月',p:'+6.0%',d:'05-20',ok:1,c:1674.8},{l:'2月',p:'+8.2%',d:'06-20',ok:1,c:1709.6},{l:'3月',p:'—',d:'—',ok:0}],chart:[0,1.5,2.8,6,8.2]},
+  {id:'r4',user:ME,code:'300750',name:'宁德时代',ch:'微信群 A',date:'2026-05-20',price:198.5,reason:'新能源板块回暖。',nodes:[{l:'1周',p:'+4.3%',d:'05-27',ok:1,c:207},{l:'2周',p:'+6.1%',d:'06-03',ok:1,c:210.6},{l:'1月',p:'+8.2%',d:'06-20',ok:1,c:214.8},{l:'2月',p:'—',d:'—',ok:0},{l:'3月',p:'—',d:'—',ok:0}],chart:[0,4.3,6.1,8.2]},
+  {id:'r5',user:'刘先生',code:'300750',name:'宁德时代',ch:'牛散分享',date:'2026-05-18',price:195,reason:'电池排产回升。',nodes:[{l:'1周',p:'+5.1%',d:'05-25',ok:1,c:204.95},{l:'2周',p:'+7.0%',d:'06-01',ok:1,c:208.65},{l:'1月',p:'+9.5%',d:'06-18',ok:1,c:213.53},{l:'2月',p:'—',d:'—',ok:0},{l:'3月',p:'—',d:'—',ok:0}],chart:[0,5.1,7,9.5]},
+  {id:'r6',user:ME,code:'002594',name:'比亚迪',ch:'朋友推荐',date:'2026-04-15',price:245,reason:'销量亮眼，出口增长。',nodes:[{l:'1周',p:'-1.2%',d:'04-22',ok:1,c:242},{l:'2周',p:'+0.8%',d:'04-29',ok:1,c:247},{l:'1月',p:'+3.1%',d:'05-15',ok:1,c:252.6},{l:'2月',p:'+1.5%',d:'06-15',ok:1,c:248.7},{l:'3月',p:'+7.4%',d:'07-15',ok:1,c:263.1}],chart:[0,-1.2,0.8,3.1,1.5,7.4]},
+  {id:'r7',user:'赵女士',code:'002594',name:'比亚迪',ch:'研报订阅',date:'2026-04-10',price:240,reason:'机构上调评级。',nodes:[{l:'1周',p:'+0.5%',d:'04-17',ok:1,c:241.2},{l:'2周',p:'+2.0%',d:'04-24',ok:1,c:244.8},{l:'1月',p:'+4.5%',d:'05-10',ok:1,c:250.8},{l:'2月',p:'+3.2%',d:'06-10',ok:1,c:247.7},{l:'3月',p:'+6.8%',d:'07-10',ok:1,c:256.3}],chart:[0,0.5,2,4.5,3.2,6.8]},
+  {id:'r8',user:ME,code:'601318',name:'中国平安',ch:'公众号',date:'2026-03-10',price:42.5,reason:'保险复苏，估值低位。',nodes:[{l:'1周',p:'+1.0%',d:'03-17',ok:1,c:42.93},{l:'2周',p:'+2.3%',d:'03-24',ok:1,c:43.48},{l:'1月',p:'-0.5%',d:'04-10',ok:1,c:42.29},{l:'2月',p:'+2.1%',d:'05-10',ok:1,c:43.39},{l:'3月',p:'+4.8%',d:'06-10',ok:1,c:44.54}],chart:[0,1,2.3,-0.5,2.1,4.8]},
+  {id:'r9',user:'周先生',code:'601318',name:'中国平安',ch:'电视财经',date:'2026-03-05',price:41.8,reason:'节目嘉宾看好保险板块。',nodes:[{l:'1周',p:'+0.8%',d:'03-12',ok:1,c:42.13},{l:'2周',p:'+1.5%',d:'03-19',ok:1,c:42.43},{l:'1月',p:'+1.2%',d:'04-05',ok:1,c:42.3},{l:'2月',p:'+3.0%',d:'05-05',ok:1,c:43.05},{l:'3月',p:'+5.2%',d:'06-05',ok:1,c:43.97}],chart:[0,0.8,1.5,1.2,3,5.2]},
+  {id:'r10',user:'王先生',code:'300750',name:'宁德时代',ch:'研报订阅',date:'2026-05-22',price:200,reason:'储能需求超预期。',nodes:[{l:'1周',p:'+3.8%',d:'05-29',ok:1,c:207.6},{l:'2周',p:'+5.5%',d:'06-05',ok:1,c:211},{l:'1月',p:'+7.0%',d:'06-22',ok:1,c:214},{l:'2月',p:'—',d:'—',ok:0},{l:'3月',p:'—',d:'—',ok:0}],chart:[0,3.8,5.5,7]},
+  {id:'r11',user:ME,code:'600519',name:'贵州茅台',ch:'微信群 A',date:'2026-04-01',price:1620,reason:'群里看好白酒板块。',nodes:[{l:'1周',p:'+1.8%',d:'04-08',ok:1,c:1649.16},{l:'2周',p:'+3.2%',d:'04-15',ok:1,c:1671.84},{l:'1月',p:'+4.5%',d:'05-01',ok:1,c:1692.9},{l:'2月',p:'+6.1%',d:'06-01',ok:1,c:1718.82},{l:'3月',p:'+7.8%',d:'07-01',ok:1,c:1746.36}],chart:[0,1.8,3.2,4.5,6.1,7.8]},
+  {id:'r12',user:ME,code:'002594',name:'比亚迪',ch:'研报订阅',date:'2026-05-05',price:252,reason:'机构上调评级。',nodes:[{l:'1周',p:'+0.5%',d:'05-12',ok:1,c:253.26},{l:'2周',p:'-0.8%',d:'05-19',ok:1,c:249.98},{l:'1月',p:'+2.2%',d:'06-05',ok:1,c:257.54},{l:'2月',p:'—',d:'—',ok:0},{l:'3月',p:'—',d:'—',ok:0}],chart:[0,0.5,-0.8,2.2]},
+  {id:'r13',user:ME,code:'601318',name:'中国平安',ch:'朋友推荐',date:'2026-04-20',price:43,reason:'朋友看好保险估值修复。',nodes:[{l:'1周',p:'-0.5%',d:'04-27',ok:1,c:42.79},{l:'2周',p:'+0.3%',d:'05-04',ok:1,c:43.13},{l:'1月',p:'+1.8%',d:'05-20',ok:1,c:43.77},{l:'2月',p:'+2.5%',d:'06-20',ok:1,c:44.08},{l:'3月',p:'—',d:'—',ok:0}],chart:[0,-0.5,0.3,1.8,2.5]},
+];
+
+let adminChannelList=[];
+let adminRecScope='all';
+
+function myRecords(){return records.filter(r=>r.user===ME)}
+function findRecord(id){return records.find(r=>r.id===id)}
+
+/* ===== 辅助 ===== */
+function fmtPrice(n){return Number(n).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function chColorOf(r){const c=(allUserChannels[r.user]||channels).find(c=>c.name===r.ch);return COLORS[c?.color||'gray']}
+function chTag(r){return `<span class="tag" style="--tag-c:${chColorOf(r)}">${r.ch}</span>`}
+function adminUserTag(user){return `<span class="user-badge${user===ME?' mine':''}">${USER_NAMES[user]||user}</span>`}
+function adminChannelCell(r){return `<div class="admin-channel-cell">${adminUserTag(r.user)}<span class="tag" style="--tag-c:${chColorOf(r)}">${r.ch}</span></div>`}
+function adminRecRow(s,clickFrom){
+  return `<tr onclick="openAdminRecDetail('${s.id}')"><td><span class="code">${s.code}</span></td><td>${s.name}</td><td>${adminUserTag(s.user)}</td><td>${chTag(s)}</td><td class="td-date">${s.date.slice(5)}</td><td class="price-cell">${fmtPrice(s.price)}</td>${chipCells(s.nodes)}<td class="action"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openAdminRecDetail('${s.id}')">详情</button></td></tr>`;
+}
+function adminThead(){return '<th>代码</th><th>名称</th><th>用户</th><th>渠道</th><th>推荐日</th><th class="num">推荐价</th>'+periods.map(p=>`<th class="num">${p.label}</th>`).join('')+'<th class="action"></th>'}
+function collectVals(recs,pi){const vals=[];recs.forEach(r=>{if(r.nodes[pi]&&r.nodes[pi].ok){const v=parseFloat(r.nodes[pi].p);if(!isNaN(v))vals.push(v)}});return vals}
+function calcPeriodStats(recs){
+  return periods.map((p,pi)=>{const vals=collectVals(recs,pi);const wins=vals.filter(v=>v>0).length;return{label:p.label,total:vals.length,wins,winRate:vals.length?Math.round(wins/vals.length*100):null,avg:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null}});
+}
+function buildAdminChannelList(){
+  const map=new Map();
+  Object.entries(allUserChannels).forEach(([user,list])=>list.forEach(c=>map.set(user+'|'+c.name,{user,name:c.name,color:c.color,desc:c.desc})));
+  records.forEach(r=>{const k=r.user+'|'+r.ch;if(!map.has(k))map.set(k,{user:r.user,name:r.ch,color:'gray',desc:'—'})});
+  adminChannelList=[...map.values()];
+}
+function adminChannelRecs(item){return records.filter(r=>r.user===item.user&&r.ch===item.name)}
+function adminChannelStats(item){return channelQuickStatsFor(adminChannelRecs(item))}
+function channelQuickStatsFor(recs){
+  const vals=[];recs.forEach(r=>r.nodes.forEach(n=>{if(n.ok){const v=parseFloat(n.p);if(!isNaN(v))vals.push(v)}}));
+  const wins=vals.filter(v=>v>0).length;
+  return{count:recs.length,winRate:vals.length?Math.round(wins/vals.length*100):null,avg:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null};
+}
+function chip(n){
+  if(!n||!n.ok)return '<span class="chip flat">—</span>';
+  const v=parseFloat(n.p);if(isNaN(v)||v===0)return `<span class="chip flat">${n.p}</span>`;
+  const cls=v>0?'up':'down',a=(0.07+Math.min(Math.abs(v)/10,1)*0.2).toFixed(2);
+  return `<span class="chip ${cls}" style="--a:${a}">${n.p}</span>`;
+}
+function chipCells(nodes,indices){return(indices||nodes.map((_,i)=>i)).map(i=>`<td class="num-cell">${chip(nodes[i])}</td>`).join('')}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)}
+
+function latestNode(s){return[...s.nodes].reverse().find(n=>n.ok)||null}
+function miniNode(n){if(!n||!n.ok)return `<span class="mini flat"><i>${n?n.l:'—'}</i>—</span>`;const v=parseFloat(n.p),cls=v>0?'up':v<0?'down':'flat';return `<span class="mini ${cls}"><i>${n.l}</i>${n.p}</span>`}
+function mcard(s,from){
+  const last=latestNode(s);let hero,heroCls;
+  if(last){const v=parseFloat(last.p);heroCls=v>0?'up':v<0?'down':'flat';hero=`<small>${last.l}</small>${last.p}`}
+  else{heroCls='flat';hero='追踪中'}
+  const n=s.nodes,pl=periods.length;
+  return `<div class="mcard" onclick="openDetail('${s.id}','${from}')"><div class="mcard-top"><div class="nm"><span class="code">${s.code}</span>${s.name}</div><div class="mcard-hero ${heroCls}">${hero}</div></div><div class="mcard-meta">${chTag(s)}<span class="mono">${s.date.slice(5)}</span><span class="mono">¥${fmtPrice(s.price)}</span></div><div class="mcard-nodes">${miniNode(n[0])}${miniNode(n[Math.min(2,pl-1)])}${miniNode(n[pl-1])}</div></div>`;
+}
+function emptyCard(t,d){return `<div class="empty" style="background:var(--surface);border:1px dashed var(--border-strong);border-radius:12px"><strong>${t}</strong>${d}</div>`}
+
+/* 动态表头 */
+function trackingThead(){
+  const base='<th>代码</th><th>名称</th><th>渠道</th><th>推荐日</th><th class="num">推荐价</th>';
+  return base+periods.map(p=>`<th class="num">${p.label}</th>`).join('')+'<th class="action"></th>';
+}
+function dashThead(){
+  const p=periods,pl=p.length;
+  const pick=[0,Math.min(2,pl-1),pl-1].filter((v,i,a)=>a.indexOf(v)===i);
+  pick.forEach((idx,i)=>{const el=document.getElementById('th-d'+(i+1));if(el)el.textContent=p[idx]?.label||'—'});
+  return pick;
+}
+
+/* ===== 导航 ===== */
+function go(route,id,from){
+  if(from)detailFrom=from;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+route).classList.add('active');
+  const hi=r=>r===route||(route==='detail'&&detailFrom==='tracking'&&r==='tracking')||(route==='detail'&&detailFrom==='search'&&r==='search')||(route==='ch-detail'&&r==='channels');
+  document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active',hi(n.dataset.route)));
+  document.querySelectorAll('.bnav,.bnav-add-wrap').forEach(n=>n.classList.toggle('active',hi(n.dataset.route)));
+  if(route==='dashboard')updateDashboardStats();
+  if(route==='tracking')renderList();
+  if(route==='search')renderSearch();
+  if(route==='channels')renderChannels();
+  if(route==='add'){fillChannelSelect();renderPeriodTags();previewTimeline()}
+  if(route==='detail'&&id)renderDetail(id);
+  if(route==='ch-detail'&&id!==undefined)renderChDetail(id);
+  location.hash=route+(id!==undefined?'/'+id:'');
+  window.scrollTo(0,0);
+}
+function goBackFromDetail(){go(detailFrom==='search'?'search':'tracking')}
+function openDetail(id,from){go('detail',id,from||'tracking')}
+document.querySelectorAll('.nav-link').forEach(n=>n.addEventListener('click',()=>go(n.dataset.route)));
+
+/* ===== 周期管理 ===== */
+function renderPeriodTags(){document.getElementById('period-tags').innerHTML=periods.map(p=>`<span class="node-tag">${p.label}（${p.days}天）</span>`).join('')}
+function renderPeriodList(){
+  document.getElementById('period-list').innerHTML=periods.map((p,i)=>`<div class="period-item"><input value="${p.label}" onchange="periods[${i}].label=this.value" placeholder="名称"><input class="days-input" type="number" value="${p.days}" min="1" onchange="periods[${i}].days=parseInt(this.value)||1" placeholder="天数"><button class="del-period" onclick="delPeriod(${i})">×</button></div>`).join('');
+}
+function openPeriodModal(){renderPeriodList();document.getElementById('period-modal').classList.add('open')}
+function closePeriodModal(){document.getElementById('period-modal').classList.remove('open');renderPeriodTags();previewTimeline()}
+function addPeriod(){
+  const l=document.getElementById('new-p-label').value.trim(),d=parseInt(document.getElementById('new-p-days').value);
+  if(!l||!d||d<1)return toast('请填写名称和天数');
+  periods.push({label:l,days:d});periods.sort((a,b)=>a.days-b.days);
+  document.getElementById('new-p-label').value='';document.getElementById('new-p-days').value='';
+  renderPeriodList();toast('已添加「'+l+'」');
+}
+function delPeriod(i){if(periods.length<=1)return toast('至少保留一个周期');periods.splice(i,1);renderPeriodList()}
+
+/* ===== 总览 ===== */
+function updateDashboardStats(){
+  const mine=myRecords(),el=id=>document.getElementById(id);
+  el('stat-tracking').textContent=mine.length;
+  const allVals=[];
+  mine.forEach(r=>r.nodes.forEach(n=>{if(n.ok){const v=parseFloat(n.p);if(!isNaN(v))allVals.push(v)}}));
+  if(allVals.length){
+    el('stat-win').textContent=Math.round(allVals.filter(v=>v>0).length/allVals.length*100)+'%';
+    const avg=allVals.reduce((a,b)=>a+b,0)/allVals.length;
+    el('stat-avg').textContent=(avg>0?'+':'')+avg.toFixed(1)+'%';
+  }else{el('stat-win').textContent='—';el('stat-avg').textContent='—'}
+  el('stat-pending').textContent=mine.reduce((a,r)=>a+r.nodes.filter(n=>!n.ok).length,0);
+  /* 渠道对比条 */
+  const chStats=channels.map(c=>{const recs=mine.filter(r=>r.ch===c.name);const vals=[];recs.forEach(r=>r.nodes.forEach(n=>{if(n.ok){const v=parseFloat(n.p);if(!isNaN(v))vals.push(v)}}));const wins=vals.filter(v=>v>0).length;return{name:c.name,color:COLORS[c.color],winRate:vals.length?Math.round(wins/vals.length*100):null,avg:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null,n:vals.length}});
+  el('dash-winrate').innerHTML=chStats.map(s=>s.winRate!==null?`<div class="bar-row"><span>${s.name}</span><div class="bar"><i style="width:${s.winRate}%;background:${s.color}"></i></div><span class="pctv">${s.winRate}%</span></div>`:`<div class="bar-row"><span>${s.name}</span><div class="bar"></div><span class="pctv dim">—</span></div>`).join('')||'<p class="dim">暂无数据</p>';
+  el('dash-avgret').innerHTML=chStats.map(s=>{if(s.avg===null)return`<div class="bar-row"><span>${s.name}</span><div class="bar"></div><span class="pctv dim">—</span></div>`;const cls=s.avg>=0?'up':'down';return`<div class="bar-row"><span>${s.name}</span><div class="bar"><i style="width:${Math.min(Math.abs(s.avg)*10,100)}%;background:${s.color}"></i></div><span class="pctv" style="color:var(--${cls})">${s.avg>0?'+':''}${s.avg.toFixed(1)}%</span></div>`}).join('')||'<p class="dim">暂无数据</p>';
+  const pick=dashThead();
+  const recent=mine.slice(0,4);
+  el('dash-recent').innerHTML=recent.map(s=>`<tr onclick="openDetail('${s.id}','tracking')"><td><span class="code">${s.code}</span></td><td>${s.name}</td><td>${chTag(s)}</td><td class="td-date">${s.date}</td><td class="price-cell">${fmtPrice(s.price)}</td>${pick.map(i=>`<td class="num-cell">${chip(s.nodes[i])}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="8"><div class="empty"><strong>暂无记录</strong></div></td></tr>';
+  el('dash-cards').innerHTML=recent.map(s=>mcard(s,'tracking')).join('')||emptyCard('暂无记录','录入第一条推荐');
+}
+
+/* ===== 我的追踪 ===== */
+function renderList(){
+  const q=document.getElementById('q').value.trim(),ch=document.getElementById('f-ch').value;
+  const list=myRecords().filter(s=>(!q||s.code.includes(q)||s.name.includes(q))&&(!ch||s.ch===ch));
+  document.getElementById('tracking-thead').innerHTML=trackingThead();
+  document.getElementById('list-body').innerHTML=list.map(s=>`<tr onclick="openDetail('${s.id}','tracking')"><td><span class="code">${s.code}</span></td><td>${s.name}</td><td>${chTag(s)}</td><td class="td-date">${s.date.slice(5)}</td><td class="price-cell">${fmtPrice(s.price)}</td>${chipCells(s.nodes)}<td class="action"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openDetail('${s.id}','tracking')">详情</button></td></tr>`).join('')||`<tr><td colspan="${5+periods.length+1}"><div class="empty"><strong>未找到记录</strong></div></td></tr>`;
+  document.getElementById('list-cards').innerHTML=list.map(s=>mcard(s,'tracking')).join('')||emptyCard('未找到记录','');
+  document.getElementById('list-count').textContent=`共 ${list.length} 条`;
+}
+
+/* ===== 搜索（仅我的） ===== */
+function matchSearch(r,q){
+  if(!q)return true;
+  if(searchScope==='stock')return r.code.includes(q)||r.name.includes(q);
+  if(searchScope==='channel')return r.ch.includes(q);
+  return r.code.includes(q)||r.name.includes(q)||r.ch.includes(q);
+}
+function setSearchScope(scope,btn){searchScope=scope;document.querySelectorAll('.search-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');renderSearch()}
+function renderSearch(){
+  const q=(document.getElementById('my-q')?.value||'').trim();
+  const list=myRecords().filter(r=>matchSearch(r,q));
+  document.getElementById('search-title').textContent=q?`搜索结果（${list.length} 条）`:`我的全部记录（${list.length} 条）`;
+  document.getElementById('search-thead').innerHTML=trackingThead();
+  document.getElementById('search-body').innerHTML=list.map(s=>`<tr onclick="openDetail('${s.id}','search')"><td><span class="code">${s.code}</span></td><td>${s.name}</td><td>${chTag(s)}</td><td class="td-date">${s.date.slice(5)}</td><td class="price-cell">${fmtPrice(s.price)}</td>${chipCells(s.nodes)}<td class="action"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openDetail('${s.id}','search')">详情</button></td></tr>`).join('')||`<tr><td colspan="${5+periods.length+1}"><div class="empty"><strong>未找到匹配记录</strong></div></td></tr>`;
+  document.getElementById('search-cards').innerHTML=list.map(s=>mcard(s,'search')).join('')||emptyCard('未找到匹配记录','试试换个关键词');
+}
+
+/* ===== 渠道列表 ===== */
+function channelRecordCount(name){return myRecords().filter(r=>r.ch===name).length}
+function channelQuickStats(name){
+  const recs=myRecords().filter(r=>r.ch===name);
+  const vals=[];recs.forEach(r=>r.nodes.forEach(n=>{if(n.ok){const v=parseFloat(n.p);if(!isNaN(v))vals.push(v)}}));
+  const wins=vals.filter(v=>v>0).length;
+  return{count:recs.length,winRate:vals.length?Math.round(wins/vals.length*100):null,avg:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null};
+}
+function renderChannels(){
+  document.getElementById('ch-grid').innerHTML=channels.map((c,i)=>{
+    const s=channelQuickStats(c.name);
+    const wr=s.winRate!==null?s.winRate+'%':'—';
+    const avg=s.avg!==null?(s.avg>0?'+':'')+s.avg.toFixed(1)+'%':'—';
+    const avgCls=s.avg!==null?(s.avg>=0?'up':'down'):'';
+    return `<div class="ch-card" style="--ch-color:${COLORS[c.color]}" onclick="go('ch-detail',${i})">
+      <div class="ch-name">${c.name}</div>
+      <div class="ch-desc">${c.desc==='—'?'':c.desc}</div>
+      <div class="ch-stats-row"><span>追踪 <strong>${s.count}</strong> 只</span><span>胜率 <strong>${wr}</strong></span><span>均收益 <strong class="${avgCls}">${avg}</strong></span></div>
+      <div class="ch-foot"><span style="font-size:12px;color:var(--t3)">点击查看详细统计 →</span>
+        <span><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openChModal(${i})">编辑</button></span>
+      </div></div>`;
+  }).join('')+`<button class="ch-add" onclick="openChModal()"><span style="font-size:26px">＋</span><span>添加新渠道</span></button>`;
+}
+
+/* ===== 渠道详情统计页 ===== */
+function renderChDetail(chIndex){
+  const c=channels[chIndex];if(!c)return;currentChDetail=chIndex;
+  const recs=myRecords().filter(r=>r.ch===c.name);
+  document.getElementById('cd-crumb').textContent=c.name;
+  document.getElementById('cd-name').textContent=c.name;
+  document.getElementById('cd-dot').style.background=COLORS[c.color];
+  document.getElementById('cd-desc').textContent=c.desc&&c.desc!=='—'?c.desc:'暂无说明';
+
+  /* 各周期统计 */
+  const pStats=periods.map((p,pi)=>{
+    const done=recs.filter(r=>r.nodes[pi]&&r.nodes[pi].ok);
+    const vals=done.map(r=>parseFloat(r.nodes[pi].p)).filter(v=>!isNaN(v));
+    const wins=vals.filter(v=>v>0).length;
+    return{label:p.label,total:done.length,wins,winRate:vals.length?Math.round(wins/vals.length*100):null,avg:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null,maxUp:vals.length?Math.max(...vals):null,maxDown:vals.length?Math.min(...vals):null};
+  });
+  const allVals=[];recs.forEach(r=>r.nodes.forEach(n=>{if(n.ok){const v=parseFloat(n.p);if(!isNaN(v))allVals.push(v)}}));
+  const overallWin=allVals.length?Math.round(allVals.filter(v=>v>0).length/allVals.length*100):null;
+  const overallAvg=allVals.length?allVals.reduce((a,b)=>a+b,0)/allVals.length:null;
+
+  /* 统计大卡 */
+  document.getElementById('cd-stats').innerHTML=`
+    <div class="stat"><span class="label">推荐总数</span><div class="num">${recs.length}</div><div class="foot">该渠道录入的股票数</div></div>
+    <div class="stat s-green"><span class="label">综合胜率</span><div class="num green">${overallWin!==null?overallWin+'%':'—'}</div><div class="foot">全部已到期节点</div></div>
+    <div class="stat s-up"><span class="label">综合平均收益</span><div class="num ${overallAvg&&overallAvg>=0?'up':''}">${overallAvg!==null?(overallAvg>0?'+':'')+overallAvg.toFixed(1)+'%':'—'}</div><div class="foot">全部已到期节点均值</div></div>
+    <div class="stat s-warn"><span class="label">待到期节点</span><div class="num warn">${recs.reduce((a,r)=>a+r.nodes.filter(n=>!n.ok).length,0)}</div><div class="foot">等待到期自动抓取</div></div>`;
+
+  /* 各周期胜率条 */
+  document.getElementById('cd-winrate').innerHTML=pStats.map(s=>s.winRate!==null?`<div class="bar-row"><span>${s.label}</span><div class="bar"><i style="width:${s.winRate}%;background:${COLORS[c.color]}"></i></div><span class="pctv">${s.winRate}%<small style="color:var(--t3);margin-left:4px">(${s.total})</small></span></div>`:`<div class="bar-row"><span>${s.label}</span><div class="bar"></div><span class="pctv dim">暂无</span></div>`).join('');
+
+  /* 各周期平均收益 */
+  document.getElementById('cd-avgret').innerHTML=pStats.map(s=>{
+    if(s.avg===null)return`<div class="bar-row"><span>${s.label}</span><div class="bar"></div><span class="pctv dim">—</span></div>`;
+    const cls=s.avg>=0?'up':'down';
+    return`<div class="bar-row"><span>${s.label}</span><div class="bar"><i style="width:${Math.min(Math.abs(s.avg)*8,100)}%;background:var(--${cls})"></i></div><span class="pctv" style="color:var(--${cls})">${s.avg>0?'+':''}${s.avg.toFixed(1)}%</span></div>`;
+  }).join('');
+
+  /* 历史走势散点 */
+  const curveData=recs.map(r=>{const first=r.nodes.find(n=>n.ok);return first?{date:r.date,v:parseFloat(first.p),label:r.code}:null}).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date));
+  const svg=document.getElementById('cd-curve');
+  if(curveData.length<2){svg.innerHTML=`<text x="250" y="95" text-anchor="middle" font-size="13" fill="var(--t3)">数据不足，至少需要 2 条已到期记录</text>`;
+  }else{
+    const w=500,h=180,pad=30;const vals=curveData.map(d=>d.v);const mx=Math.max(...vals.map(Math.abs),1);
+    const cs=getComputedStyle(document.documentElement);const accent=cs.getPropertyValue('--accent').trim();const upC=cs.getPropertyValue('--up').trim();const downC=cs.getPropertyValue('--down').trim();const grid=cs.getPropertyValue('--chart-grid').trim();
+    const coords=curveData.map((d,i)=>[pad+(i/(curveData.length-1))*(w-pad*2),h/2-(d.v/mx)*(h/2-pad)]);
+    const dots=coords.map((c,i)=>{const v=curveData[i].v;const col=v>0?upC:v<0?downC:accent;return`<circle cx="${c[0]}" cy="${c[1]}" r="5" fill="${col}" opacity=".85"><title>${curveData[i].label} ${curveData[i].v>0?'+':''}${curveData[i].v}%</title></circle>`}).join('');
+    const line=coords.map(c=>c.join(',')).join(' ');
+    svg.innerHTML=`<line x1="0" y1="${h/2}" x2="${w}" y2="${h/2}" stroke="${grid}"/><text x="4" y="${h/2-6}" font-size="10" fill="${grid}" font-family="IBM Plex Mono">0%</text><polyline fill="none" stroke="${accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".4" points="${line}"/>${dots}`;
+  }
+
+  /* 个股列表 */
+  document.getElementById('cd-thead').innerHTML=trackingThead();
+  document.getElementById('cd-tbody').innerHTML=recs.map(s=>`<tr onclick="openDetail('${s.id}','channels')"><td><span class="code">${s.code}</span></td><td>${s.name}</td><td>${chTag(s)}</td><td class="td-date">${s.date.slice(5)}</td><td class="price-cell">${fmtPrice(s.price)}</td>${chipCells(s.nodes)}<td class="action"><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openDetail('${s.id}','channels')">详情</button></td></tr>`).join('')||`<tr><td colspan="${5+periods.length+1}"><div class="empty"><strong>该渠道暂无记录</strong></div></td></tr>`;
+  document.getElementById('cd-cards').innerHTML=recs.map(s=>mcard(s,'channels')).join('')||emptyCard('该渠道暂无记录','');
+}
+
+/* ===== 个股详情 ===== */
+function renderDetail(id){
+  const s=findRecord(id);if(!s)return;
+  document.getElementById('crumb-back').textContent=detailFrom==='search'?'搜索':'我的追踪';
+  document.getElementById('crumb-name').textContent=s.code+' '+s.name;
+  document.getElementById('d-title').textContent=s.code+' '+s.name;
+  document.getElementById('d-user').textContent='我（本人录入）';
+  const ct=document.getElementById('d-ch');ct.textContent='渠道：'+s.ch;ct.style.setProperty('--tag-c',chColorOf(s));
+  document.getElementById('d-meta').textContent=`推荐日 ${s.date} · 推荐价 ¥${fmtPrice(s.price)}`;
+  document.getElementById('d-reason').textContent=s.reason;
+
+  const railNodes=[{l:'推荐日',v:'¥'+fmtPrice(s.price),d:s.date.slice(5),done:1,cls:''},...s.nodes.map(n=>({l:n.l,v:n.ok?n.p:'待到期',d:n.d,done:n.ok,cls:n.ok?(n.p.startsWith('+')?'up':n.p.startsWith('-')?'down':''):'pend'}))];
+  document.getElementById('d-rail').innerHTML=railNodes.map(n=>`<div class="rail-node ${n.done?'done':''}"><div class="rail-dot"></div><div class="rl">${n.l}</div><div class="rv ${n.cls}">${n.v}</div><div class="rd">${n.d}</div></div>`).join('');
+
+  const rows=[['推荐日',s.date,fmtPrice(s.price),'—','手动录入'],...s.nodes.filter(n=>n.ok).map(n=>[n.l,'2026-'+n.d,fmtPrice(n.c),n.p,'自动抓取']),...s.nodes.filter(n=>!n.ok).map(n=>[n.l,'—','—','—','待到期'])];
+  document.getElementById('d-table').innerHTML=rows.map(r=>{const v=String(r[3]),cls=v.startsWith('+')?'up':v.startsWith('-')?'down':'flat';return`<tr><td>${r[0]}</td><td class="td-date">${r[1]}</td><td class="price-cell">${r[2]}</td><td class="num-cell">${v==='—'?'<span class="chip flat">—</span>':`<span class="chip ${cls}">${v}</span>`}</td><td class="dim" style="font-size:12.5px">${r[4]}</td></tr>`}).join('');
+
+  const pts=s.chart,max=Math.max(...pts.map(Math.abs),1),w=400,h=160,pad=26;
+  const coords=pts.map((v,i)=>[pad+(i/(Math.max(pts.length-1,1)))*(w-pad*2),h/2-(v/max)*(h/2-pad)]);
+  const line=coords.map(c=>c.join(',')).join(' ');
+  const last=coords[coords.length-1],lastV=pts[pts.length-1];
+  const cs=getComputedStyle(document.documentElement);const accent=cs.getPropertyValue('--accent').trim();const grid=cs.getPropertyValue('--chart-grid').trim();
+  const lastColor=lastV>0?cs.getPropertyValue('--up').trim():lastV<0?cs.getPropertyValue('--down').trim():accent;
+  const area=`${coords[0][0]},${h/2} ${line} ${last[0]},${h/2}`;
+  document.getElementById('d-chart').innerHTML=`<defs><linearGradient id="dg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${accent}" stop-opacity=".2"/><stop offset="100%" stop-color="${accent}" stop-opacity="0"/></linearGradient></defs><line x1="0" y1="${h/2}" x2="${w}" y2="${h/2}" stroke="${grid}"/><polygon fill="url(#dg)" points="${area}"/><polyline fill="none" stroke="${accent}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${line}"/><circle cx="${last[0]}" cy="${last[1]}" r="4.5" fill="${lastColor}"/><text x="${Math.min(last[0]+8,w-42)}" y="${Math.max(last[1]-9,12)}" font-size="11" font-weight="600" fill="${lastColor}" font-family="IBM Plex Mono">${(lastV>0?'+':'')+lastV}%</text>`;
+}
+
+/* ===== 渠道编辑 ===== */
+function pickChannelColor(){const c=['blue','green','orange','purple','gray'];return c[channels.length%c.length]}
+function ensureChannel(name,silent){
+  const t=name.trim();if(!t)return null;let ch=channels.find(c=>c.name===t);
+  if(!ch){ch={name:t,color:pickChannelColor(),desc:'录入时自动创建'};channels.push(ch);fillChannelSelect();renderChannels();if(!silent)toast('已自动创建渠道「'+t+'」')}return ch;
+}
+function fillChannelSelect(){
+  const sel=document.getElementById('f-channel'),f=document.getElementById('f-ch');
+  if(sel){const prev=sel.value;sel.innerHTML=channels.map(c=>`<option value="${c.name}">${c.name}</option>`).join('')+`<option value="${NEW_CHANNEL}">＋ 添加新渠道…</option>`;if(prev&&prev!==NEW_CHANNEL&&channels.some(c=>c.name===prev))sel.value=prev;else if(channels.length)sel.value=channels[0].name;onChannelPick()}
+  if(f)f.innerHTML='<option value="">全部渠道</option>'+channels.map(c=>`<option>${c.name}</option>`).join('');
+}
+function onChannelPick(){const sel=document.getElementById('f-channel'),wrap=document.getElementById('f-channel-new-wrap');if(!sel||!wrap)return;wrap.classList.toggle('hidden',sel.value!==NEW_CHANNEL);if(sel.value===NEW_CHANNEL)setTimeout(()=>document.getElementById('f-channel-new')?.focus(),50)}
+function getRecChannelName(){const sel=document.getElementById('f-channel');if(!sel)return '';return sel.value===NEW_CHANNEL?(document.getElementById('f-channel-new')?.value.trim()||''):sel.value}
+function openChModal(editIndex){
+  editingChannelIndex=editIndex??-1;const isEdit=editingChannelIndex>=0;
+  document.getElementById('ch-modal-title').textContent=isEdit?'编辑渠道':'新建渠道';
+  document.getElementById('ch-modal-save').textContent=isEdit?'保存':'创建';
+  if(isEdit){const c=channels[editingChannelIndex];document.getElementById('m-name').value=c.name;document.getElementById('m-desc').value=(c.desc==='—'||c.desc==='录入时自动创建')?'':c.desc;document.getElementById('m-color').value=c.color}
+  else{document.getElementById('m-name').value='';document.getElementById('m-desc').value='';document.getElementById('m-color').value='blue'}
+  document.getElementById('ch-modal').classList.add('open');setTimeout(()=>document.getElementById('m-name').focus(),50);
+}
+function closeChModal(){document.getElementById('ch-modal').classList.remove('open');editingChannelIndex=-1}
+function saveChannel(){
+  const name=document.getElementById('m-name').value.trim();if(!name)return toast('请填写名称');
+  const color=document.getElementById('m-color').value,desc=document.getElementById('m-desc').value.trim()||'—';
+  if(editingChannelIndex>=0){if(channels.some((c,i)=>i!==editingChannelIndex&&c.name===name))return toast('名称已存在');const ch=channels[editingChannelIndex];const old=ch.name;ch.name=name;ch.color=color;ch.desc=desc;records.filter(r=>r.user===ME&&r.ch===old).forEach(r=>{r.ch=name});toast('已更新')}
+  else{if(channels.some(c=>c.name===name))return toast('名称已存在');channels.push({name,color,desc});toast('已创建')}
+  closeChModal();renderChannels();fillChannelSelect();renderList();
+}
+
+/* ===== 录入 ===== */
+function matchName(){document.getElementById('f-name').value=NAMES[document.getElementById('f-code').value.trim()]||'（未识别）'}
+function previewTimeline(){
+  const d=new Date(document.getElementById('f-date').value);
+  const add=n=>{const r=new Date(d);r.setDate(r.getDate()+n);return r.toISOString().slice(0,10)};
+  document.getElementById('tl-preview').innerHTML=[{l:'推荐日',d:document.getElementById('f-date').value,s:'<span class="chip" style="color:var(--accent);background:var(--accent-dim)">已录入</span>'},...periods.map(p=>({l:p.label,d:add(p.days),s:'<span class="chip flat">待抓取</span>'}))].map(r=>`<tr><td>${r.l}</td><td class="td-date">${r.d}</td><td>${r.s}</td></tr>`).join('');
+}
+function saveRec(){
+  const code=document.getElementById('f-code').value.trim(),price=parseFloat(document.getElementById('f-price').value);
+  if(!code||!price)return toast('请填写代码和价格');
+  const isNew=document.getElementById('f-channel').value===NEW_CHANNEL,chName=getRecChannelName();
+  if(!chName)return toast(isNew?'请输入新渠道名称':'请选择推荐渠道');
+  const ch=channels.find(c=>c.name===chName)||ensureChannel(chName,true);
+  const id='r'+(nextId++);
+  records.unshift({id,user:ME,code,name:document.getElementById('f-name').value,ch:ch.name,date:document.getElementById('f-date').value,price,reason:document.getElementById('f-reason').value,nodes:periods.map(p=>({l:p.label,p:'—',d:'—',ok:0})),chart:[0]});
+  toast(code+' 已保存');fillChannelSelect();renderChannels();buildAdminChannelList();
+  setTimeout(()=>openDetail(id,'tracking'),600);
+}
+
+/* ===== 管理后台 ===== */
+function adminGo(route,id){
+  document.querySelectorAll('#screen-admin .page').forEach(p=>p.classList.remove('active'));
+  const page=document.getElementById('admin-page-'+route);
+  if(page)page.classList.add('active');
+  document.querySelectorAll('[data-admin-route]').forEach(n=>n.classList.toggle('active',n.dataset.adminRoute===route||(route==='ch-detail'&&n.dataset.adminRoute==='channels')||(route==='stock-detail'&&n.dataset.adminRoute==='stocks')));
+  if(route==='dashboard')renderAdminDashboard();
+  if(route==='stocks')renderAdminStocks();
+  if(route==='channels')renderAdminChannels();
+  if(route==='records')renderAdminRecords();
+  if(route==='ch-detail'&&id!==undefined)renderAdminChDetail(parseInt(id));
+  if(route==='stock-detail'&&id)renderAdminStockDetail(id);
+  location.hash='admin/'+route+(id!==undefined&&id!==''?'/'+encodeURIComponent(id):'');
+  window.scrollTo(0,0);
+}
+function adminInit(){buildAdminChannelList();fillAdminUserFilter()}
+function fillAdminUserFilter(){
+  const sel=document.getElementById('admin-ch-user');if(!sel)return;
+  const users=[...new Set(records.map(r=>r.user))];
+  sel.innerHTML='<option value="">全部用户</option>'+users.map(u=>`<option value="${u}">${USER_NAMES[u]||u}</option>`).join('');
+}
+function renderAdminDashboard(){
+  buildAdminChannelList();
+  const users=[...new Set(records.map(r=>r.user))],stocks=[...new Set(records.map(r=>r.code))];
+  const allVals=[];records.forEach(r=>r.nodes.forEach(n=>{if(n.ok){const v=parseFloat(n.p);if(!isNaN(v))allVals.push(v)}}));
+  const win=allVals.length?Math.round(allVals.filter(v=>v>0).length/allVals.length*100):null;
+  document.getElementById('admin-kpis').innerHTML=`
+    <div class="stat"><span class="label">注册用户</span><div class="num">${users.length}</div><div class="foot">有录入行为的用户</div></div>
+    <div class="stat"><span class="label">推荐总数</span><div class="num">${records.length}</div><div class="foot">全站推荐记录</div></div>
+    <div class="stat s-green"><span class="label">覆盖股票</span><div class="num green">${stocks.length}</div><div class="foot">被推荐过的代码数</div></div>
+    <div class="stat s-up"><span class="label">全站胜率</span><div class="num up">${win!==null?win+'%':'—'}</div><div class="foot">已到期节点上涨占比</div></div>`;
+  const chRank=adminChannelList.map(item=>({item,...adminChannelStats(item),color:COLORS[item.color]})).filter(x=>x.winRate!==null).sort((a,b)=>b.winRate-a.winRate).slice(0,5);
+  document.getElementById('admin-top-ch').innerHTML=chRank.map(s=>`<div class="bar-row"><span>${USER_NAMES[s.item.user]} · ${s.item.name}</span><div class="bar"><i style="width:${s.winRate}%;background:${s.color}"></i></div><span class="pctv">${s.winRate}%</span></div>`).join('')||'<p class="dim">暂无数据</p>';
+  const stockMap={};records.forEach(r=>{if(!stockMap[r.code])stockMap[r.code]={code:r.code,name:r.name,count:0};stockMap[r.code].count++});
+  document.getElementById('admin-top-stocks').innerHTML=Object.values(stockMap).sort((a,b)=>b.count-a.count).slice(0,5).map(s=>`<div class="bar-row"><span>${s.code} ${s.name}</span><div class="bar"><i style="width:${Math.min(s.count/records.length*100*3,100)}%;background:var(--accent)"></i></div><span class="pctv">${s.count} 次</span></div>`).join('');
+  const pick=dashThead();
+  ['adm-th1','adm-th2','adm-th3'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.textContent=periods[pick[i]]?.label||'—'});
+  const recent=[...records].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+  document.getElementById('admin-recent').innerHTML=recent.map(s=>`<tr onclick="adminGo('stock-detail','${s.code}')"><td><span class="code">${s.code}</span></td><td>${s.name}</td><td>${adminUserTag(s.user)}</td><td>${chTag(s)}</td><td class="td-date">${s.date}</td><td class="price-cell">${fmtPrice(s.price)}</td>${pick.map(i=>`<td class="num-cell">${chip(s.nodes[i])}</td>`).join('')}</tr>`).join('');
+}
+function renderAdminStocks(){
+  const q=(document.getElementById('admin-stock-q')?.value||'').trim(),map={};
+  records.forEach(r=>{if(q&&!r.code.includes(q)&&!r.name.includes(q))return;if(!map[r.code])map[r.code]={code:r.code,name:r.name,recs:[]};map[r.code].recs.push(r)});
+  const list=Object.values(map);
+  document.getElementById('admin-stocks-thead').innerHTML='<th>代码</th><th>名称</th><th class="num">推荐次数</th><th class="num">涉及用户</th>'+periods.map(p=>`<th class="num">${p.label}均收益</th>`).join('');
+  document.getElementById('admin-stocks-body').innerHTML=list.map(s=>{
+    const users=[...new Set(s.recs.map(r=>r.user))].length;
+    const pcells=periods.map((p,pi)=>{const vals=collectVals(s.recs,pi);if(!vals.length)return '<td class="num-cell"><span class="chip flat">—</span></td>';const avg=vals.reduce((a,b)=>a+b,0)/vals.length;const cls=avg>0?'up':avg<0?'down':'flat';return `<td class="num-cell"><span class="chip ${cls}">${avg>0?'+':''}${avg.toFixed(1)}%</span></td>`}).join('');
+    return `<tr onclick="adminGo('stock-detail','${s.code}')"><td><span class="code">${s.code}</span></td><td>${s.name}</td><td class="num-cell mono">${s.recs.length}</td><td class="num-cell mono">${users}</td>${pcells}</tr>`;
+  }).join('')||`<tr><td colspan="${4+periods.length}"><div class="empty"><strong>未找到股票</strong></div></td></tr>`;
+  document.getElementById('admin-stock-count').textContent=`共 ${list.length} 只`;
+}
+function renderAdminStockDetail(code){
+  const recs=records.filter(r=>r.code===code);if(!recs.length)return;
+  document.getElementById('asd-crumb').textContent=code+' '+recs[0].name;
+  document.getElementById('asd-title').textContent=code+' '+recs[0].name;
+  document.getElementById('asd-meta').textContent=`全站共 ${recs.length} 条推荐 · ${[...new Set(recs.map(r=>r.user))].length} 位用户`;
+  const allVals=[];recs.forEach(r=>r.nodes.forEach(n=>{if(n.ok){const v=parseFloat(n.p);if(!isNaN(v))allVals.push(v)}}));
+  const win=allVals.length?Math.round(allVals.filter(v=>v>0).length/allVals.length*100):null,avg=allVals.length?allVals.reduce((a,b)=>a+b,0)/allVals.length:null;
+  document.getElementById('asd-stats').innerHTML=`
+    <div class="stat"><span class="label">推荐次数</span><div class="num">${recs.length}</div></div>
+    <div class="stat s-green"><span class="label">综合胜率</span><div class="num green">${win!==null?win+'%':'—'}</div></div>
+    <div class="stat s-up"><span class="label">综合均收益</span><div class="num up">${avg!==null?(avg>0?'+':'')+avg.toFixed(1)+'%':'—'}</div></div>
+    <div class="stat"><span class="label">涉及渠道</span><div class="num">${[...new Set(recs.map(r=>r.user+'|'+r.ch))].length}</div></div>`;
+  const pStats=calcPeriodStats(recs);
+  document.getElementById('asd-periods').innerHTML=`<table class="period-matrix"><thead><tr><th>周期</th><th>样本</th><th>胜率</th><th>平均收益</th></tr></thead><tbody>${pStats.map(s=>`<tr><td>${s.label}</td><td class="mono">${s.total}</td><td>${s.winRate!==null?s.winRate+'%':'—'}</td><td class="${s.avg!==null?(s.avg>=0?'pm-up':'pm-down'):'pm-dim'}">${s.avg!==null?(s.avg>0?'+':'')+s.avg.toFixed(1)+'%':'—'}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('asd-thead').innerHTML=adminThead();
+  document.getElementById('asd-tbody').innerHTML=recs.map(s=>adminRecRow(s)).join('');
+}
+function renderAdminChannels(){
+  buildAdminChannelList();
+  const q=(document.getElementById('admin-ch-q')?.value||'').trim().toLowerCase(),uf=document.getElementById('admin-ch-user')?.value||'';
+  const list=adminChannelList.filter(item=>{
+    if(uf&&item.user!==uf)return false;
+    const label=((USER_NAMES[item.user]||item.user)+item.name).toLowerCase();
+    if(q&&!label.includes(q)&&!item.name.toLowerCase().includes(q))return false;
+    return true;
+  });
+  document.getElementById('admin-ch-count').textContent=`共 ${list.length} 个渠道`;
+  document.getElementById('admin-ch-grid').innerHTML=list.map(item=>{
+    const idx=adminChannelList.findIndex(x=>x.user===item.user&&x.name===item.name);
+    const s=adminChannelStats(item),wr=s.winRate!==null?s.winRate+'%':'—',avg=s.avg!==null?(s.avg>0?'+':'')+s.avg.toFixed(1)+'%':'—',avgCls=s.avg!==null?(s.avg>=0?'up':'down'):'';
+    return `<div class="ch-card" style="--ch-color:${COLORS[item.color]}" onclick="adminGo('ch-detail',${idx})">
+      <div style="margin-bottom:8px">${adminUserTag(item.user)}</div>
+      <div class="ch-name">${item.name}</div>
+      <div class="ch-desc">${item.desc&&item.desc!=='—'?item.desc:(USER_NAMES[item.user]+' 的渠道')}</div>
+      <div class="ch-stats-row"><span>追踪 <strong>${s.count}</strong></span><span>胜率 <strong>${wr}</strong></span><span>均收益 <strong class="${avgCls}">${avg}</strong></span></div>
+      <div class="ch-foot"><span style="font-size:12px;color:var(--t3)">点击查看分周期业绩 →</span></div></div>`;
+  }).join('')||emptyCard('未找到渠道','');
+}
+function renderAdminChDetail(idx){
+  const item=adminChannelList[idx];if(!item)return;
+  const recs=adminChannelRecs(item),color=COLORS[item.color];
+  document.getElementById('acd-crumb').textContent=(USER_NAMES[item.user]||item.user)+' · '+item.name;
+  document.getElementById('acd-name').textContent=item.name;
+  document.getElementById('acd-dot').style.background=color;
+  document.getElementById('acd-desc').textContent=item.desc&&item.desc!=='—'?item.desc:'暂无说明';
+  document.getElementById('acd-user').innerHTML=adminUserTag(item.user);
+  const pStats=calcPeriodStats(recs);
+  const allVals=[];recs.forEach(r=>r.nodes.forEach(n=>{if(n.ok){const v=parseFloat(n.p);if(!isNaN(v))allVals.push(v)}}));
+  const overallWin=allVals.length?Math.round(allVals.filter(v=>v>0).length/allVals.length*100):null,overallAvg=allVals.length?allVals.reduce((a,b)=>a+b,0)/allVals.length:null;
+  document.getElementById('acd-stats').innerHTML=`
+    <div class="stat"><span class="label">推荐总数</span><div class="num">${recs.length}</div></div>
+    <div class="stat s-green"><span class="label">综合胜率</span><div class="num green">${overallWin!==null?overallWin+'%':'—'}</div></div>
+    <div class="stat s-up"><span class="label">综合均收益</span><div class="num ${overallAvg&&overallAvg>=0?'up':''}">${overallAvg!==null?(overallAvg>0?'+':'')+overallAvg.toFixed(1)+'%':'—'}</div></div>
+    <div class="stat"><span class="label">涉及股票</span><div class="num">${[...new Set(recs.map(r=>r.code))].length}</div></div>`;
+  document.getElementById('acd-matrix').innerHTML=`<thead><tr><th>周期</th><th>样本量</th><th>上涨数</th><th>胜率</th><th>平均收益</th><th>最大涨幅</th><th>最大回撤</th></tr></thead><tbody>${pStats.map((s,pi)=>{const vals=collectVals(recs,pi);const maxUp=vals.length?Math.max(...vals):null,maxDn=vals.length?Math.min(...vals):null;return `<tr><td>${s.label}</td><td class="mono">${s.total}</td><td class="mono">${s.wins}</td><td>${s.winRate!==null?s.winRate+'%':'—'}</td><td class="${s.avg!==null?(s.avg>=0?'pm-up':'pm-down'):'pm-dim'}">${s.avg!==null?(s.avg>0?'+':'')+s.avg.toFixed(1)+'%':'—'}</td><td class="pm-up">${maxUp!==null&&maxUp>0?'+'+maxUp.toFixed(1)+'%':'—'}</td><td class="pm-down">${maxDn!==null&&maxDn<0?maxDn.toFixed(1)+'%':'—'}</td></tr>`}).join('')}</tbody>`;
+  document.getElementById('acd-winrate').innerHTML=pStats.map(s=>s.winRate!==null?`<div class="bar-row"><span>${s.label}</span><div class="bar"><i style="width:${s.winRate}%;background:${color}"></i></div><span class="pctv">${s.winRate}%</span></div>`:`<div class="bar-row"><span>${s.label}</span><div class="bar"></div><span class="pctv dim">—</span></div>`).join('');
+  document.getElementById('acd-avgret').innerHTML=pStats.map(s=>{if(s.avg===null)return`<div class="bar-row"><span>${s.label}</span><div class="bar"></div><span class="pctv dim">—</span></div>`;const cls=s.avg>=0?'up':'down';return`<div class="bar-row"><span>${s.label}</span><div class="bar"><i style="width:${Math.min(Math.abs(s.avg)*10,100)}%;background:${color}"></i></div><span class="pctv" style="color:var(--${cls})">${s.avg>0?'+':''}${s.avg.toFixed(1)}%</span></div>`}).join('');
+  const curveData=recs.map(r=>{const first=r.nodes.find(n=>n.ok);return first?{date:r.date,v:parseFloat(first.p),label:r.code}:null}).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date));
+  const svg=document.getElementById('acd-curve');
+  if(curveData.length<2){svg.innerHTML='<text x="50%" y="50%" text-anchor="middle" fill="var(--t3)" font-size="13">数据不足，无法绘制走势</text>'}
+  else{const w=500,h=180,pad=30,mx=Math.max(...curveData.map(d=>Math.abs(d.v)),1);const cs=getComputedStyle(document.documentElement);const accent=cs.getPropertyValue('--accent').trim(),grid=cs.getPropertyValue('--chart-grid').trim(),upC=cs.getPropertyValue('--up').trim(),downC=cs.getPropertyValue('--down').trim();const coords=curveData.map((d,i)=>[pad+(i/(curveData.length-1))*(w-pad*2),h/2-(d.v/mx)*(h/2-pad)]);const line=coords.map(c=>c.join(',')).join(' ');const dots=coords.map((c,i)=>{const v=curveData[i].v,col=v>0?upC:v<0?downC:accent;return`<circle cx="${c[0]}" cy="${c[1]}" r="5" fill="${col}"><title>${curveData[i].label} ${v>0?'+':''}${v}%</title></circle>`}).join('');svg.innerHTML=`<line x1="${pad}" y1="${h/2}" x2="${w-pad}" y2="${h/2}" stroke="${grid}"/><polyline fill="none" stroke="${accent}" stroke-width="2" points="${line}"/>${dots}`}
+  document.getElementById('acd-thead').innerHTML=adminThead();
+  document.getElementById('acd-tbody').innerHTML=recs.map(s=>adminRecRow(s)).join('')||`<tr><td colspan="${5+periods.length+1}"><div class="empty"><strong>该渠道暂无记录</strong></div></td></tr>`;
+}
+function setAdminRecScope(scope,btn){adminRecScope=scope;document.querySelectorAll('#admin-page-records .search-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');renderAdminRecords()}
+function renderAdminRecords(){
+  const q=(document.getElementById('admin-rec-q')?.value||'').trim();
+  const list=records.filter(r=>{if(!q)return true;if(adminRecScope==='stock')return r.code.includes(q)||r.name.includes(q);if(adminRecScope==='channel')return r.ch.includes(q);if(adminRecScope==='user')return(USER_NAMES[r.user]||r.user).includes(q);return r.code.includes(q)||r.name.includes(q)||r.ch.includes(q)||(USER_NAMES[r.user]||'').includes(q)});
+  document.getElementById('admin-rec-title').textContent=q?`搜索结果（${list.length} 条）`:`全站记录（${list.length} 条）`;
+  document.getElementById('admin-rec-thead').innerHTML=adminThead();
+  document.getElementById('admin-rec-body').innerHTML=list.map(s=>adminRecRow(s)).join('')||`<tr><td colspan="${5+periods.length+1}"><div class="empty"><strong>未找到记录</strong></div></td></tr>`;
+}
+function openAdminRecDetail(id){const s=findRecord(id);if(s)toast(`${s.code} ${s.name} · ${USER_NAMES[s.user]} · ${s.ch}`)}
+
+/* ===== 初始化 ===== */
+function init(){buildAdminChannelList();fillChannelSelect();renderPeriodTags();renderList();renderChannels();renderSearch();previewTimeline();updateDashboardStats()}
+window.addEventListener('hashchange',()=>{
+  const hash=location.hash.slice(1)||'dashboard';
+  if(hash.startsWith('admin/')){
+    if(document.getElementById('screen-admin').classList.contains('hidden'))return;
+    const parts=hash.split('/');const r=parts[1]||'dashboard',id=parts[2];
+    if(r==='ch-detail'&&id!==undefined)adminGo('ch-detail',parseInt(id));
+    else if(r==='stock-detail'&&id)adminGo('stock-detail',decodeURIComponent(id));
+    else adminGo(r);
+    return;
+  }
+  const parts=hash.split('/');const r=parts[0],id=parts[1];
+  if(document.getElementById('screen-app').classList.contains('hidden'))return;
+  if(r==='detail'&&id){detailFrom=detailFrom||'tracking';go('detail',id)}
+  else if(r==='ch-detail'&&id!==undefined)go('ch-detail',parseInt(id));
+  else go(r);
+});
+</script>
+</body>
+</html>

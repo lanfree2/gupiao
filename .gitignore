@@ -1,0 +1,35 @@
+# Env
+.env
+.env.local
+*.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/node_modules/
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Logs & data
+*.log
+postgres_data/
+redis_data/
+backend/data/
+*.db
+
+# Build
+dist/
+build/
