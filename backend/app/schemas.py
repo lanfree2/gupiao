@@ -129,6 +129,10 @@ class RecommendationUpdateIn(BaseModel):
     reason: str | None = None
 
 
+class IdIn(BaseModel):
+    id: int
+
+
 class NodeOut(BaseModel):
     id: int
     label: str

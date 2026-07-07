@@ -3,7 +3,7 @@ from sqlalchemy.orm import joinedload
 
 from app.deps import CurrentAdmin, DbSession
 from app.models import Channel, NodeStatus, Recommendation, User, UserPeriod, UserRole
-from app.schemas import AdminChannelOut, MessageOut, RecommendationOut, StockAggOut
+from app.schemas import AdminChannelOut, IdIn, MessageOut, RecommendationOut, StockAggOut
 from app.services.stats import all_node_values, collect_node_values, rec_to_out, stats_from_values
 from app.services.tracking import ensure_user_periods
 
@@ -266,6 +266,11 @@ def refetch_recommendation(rec_id: int, db: DbSession, admin: CurrentAdmin):
     reset_count = reset_recommendation_nodes(db, rec_id)
     result = process_recommendation_due_nodes(db, rec_id)
     return {"reset_nodes": reset_count, **result}
+
+
+@router.post("/recommendations/delete", response_model=MessageOut)
+def admin_delete_recommendation_by_id(body: IdIn, db: DbSession, admin: CurrentAdmin):
+    return admin_delete_recommendation(body.id, db, admin)
 
 
 @router.delete("/recommendations/{rec_id}", response_model=MessageOut)

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.deps import CurrentUser, DbSession
 from app.models import Channel, Recommendation
-from app.schemas import ChannelIn, ChannelOut, ChannelStatsOut, MessageOut
+from app.schemas import ChannelIn, ChannelOut, ChannelStatsOut, IdIn, MessageOut
 from app.services.stats import all_node_values, stats_from_values
 
 router = APIRouter(prefix="/channels", tags=["渠道"])
@@ -67,6 +67,11 @@ def update_channel(channel_id: int, body: ChannelIn, user: CurrentUser, db: DbSe
     db.commit()
     db.refresh(ch)
     return ChannelOut.model_validate(ch)
+
+
+@router.post("/delete", response_model=MessageOut)
+def delete_channel_by_id(body: IdIn, user: CurrentUser, db: DbSession):
+    return delete_channel(body.id, user, db)
 
 
 @router.get("/{channel_id}", response_model=ChannelStatsOut)

@@ -15,12 +15,49 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
     const detail = data.detail
-    const msg = Array.isArray(detail)
+    let msg = Array.isArray(detail)
       ? detail.map((d: { msg?: string }) => d.msg).join('; ')
       : detail || data.message || res.statusText || `HTTP ${res.status}`
+    if (msg === 'Not Found' && res.status === 404) {
+      msg = '接口不存在，请更新代码并重启后端（git pull && 重启服务）'
+    }
     throw new Error(msg)
   }
   return data as T
+}
+
+async function deleteWithFallback(id: number, kind: 'rec' | 'channel' | 'admin-rec'): Promise<{ message: string }> {
+  const attempts: { method: 'POST' | 'DELETE'; path: string; body?: string }[] =
+    kind === 'rec'
+      ? [
+          { method: 'POST', path: '/recommendations/delete', body: JSON.stringify({ id }) },
+          { method: 'POST', path: `/recommendations/${id}/delete` },
+          { method: 'DELETE', path: `/recommendations/${id}` },
+        ]
+      : kind === 'channel'
+        ? [
+            { method: 'POST', path: '/channels/delete', body: JSON.stringify({ id }) },
+            { method: 'POST', path: `/channels/${id}/delete` },
+            { method: 'DELETE', path: `/channels/${id}` },
+          ]
+        : [
+            { method: 'POST', path: '/admin/recommendations/delete', body: JSON.stringify({ id }) },
+            { method: 'POST', path: `/admin/recommendations/${id}/delete` },
+            { method: 'DELETE', path: `/admin/recommendations/${id}` },
+          ]
+
+  let lastErr: Error | null = null
+  for (const { method, path, body } of attempts) {
+    try {
+      return await request(path, { method, body })
+    } catch (e) {
+      lastErr = e instanceof Error ? e : new Error('删除失败')
+      if (!lastErr.message.includes('Not Found') && !lastErr.message.includes('接口不存在')) {
+        throw lastErr
+      }
+    }
+  }
+  throw lastErr || new Error('删除失败，请 git pull 后重启后端')
 }
 
 export const api = {
@@ -43,14 +80,14 @@ export const api = {
   channels: () => api.get('/channels'),
   createChannel: (body: object) => api.post('/channels', body),
   updateChannel: (id: number, body: object) => api.put(`/channels/${id}`, body),
-  deleteChannel: (id: number) => api.post(`/channels/${id}/delete`),
+  deleteChannel: (id: number) => deleteWithFallback(id, 'channel'),
   channelDetail: (id: number) => api.get(`/recommendations/channels/${id}/detail`),
   recommendations: (params?: string) => api.get(`/recommendations${params || ''}`),
   search: (q: string, scope: string) => api.get(`/recommendations/search?q=${encodeURIComponent(q)}&scope=${scope}`),
   getRec: (id: number) => api.get(`/recommendations/${id}`),
   createRec: (body: object) => api.post('/recommendations', body),
   updateRec: (id: number, body: object) => api.put(`/recommendations/${id}`, body),
-  deleteRec: (id: number) => api.post(`/recommendations/${id}/delete`),
+  deleteRec: (id: number) => deleteWithFallback(id, 'rec'),
   refetchRec: (id: number) => api.post(`/recommendations/${id}/refetch`),
   periods: () => api.get('/periods'),
   savePeriods: (body: object[]) => api.put('/periods', body),
@@ -77,7 +114,7 @@ export const api = {
     return api.get(`/admin/records${qs ? `?${qs}` : ''}`)
   },
   runWorker: () => api.post('/admin/worker/run'),
-  adminDeleteRec: (id: number) => api.post(`/admin/recommendations/${id}/delete`),
+  adminDeleteRec: (id: number) => deleteWithFallback(id, 'admin-rec'),
 }
 
 export function fmtPct(v: number | null | undefined) {

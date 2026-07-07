@@ -8,6 +8,7 @@ from app.schemas import (
     ChannelOut,
     ChannelStatsOut,
     FetchResultOut,
+    IdIn,
     MessageOut,
     RecommendationCreateOut,
     RecommendationIn,
@@ -126,6 +127,67 @@ def search_recommendations(
     return [RecommendationOut(**rec_to_out(r)) for r in result]
 
 
+@router.get("/channels/{channel_id}/detail")
+def channel_detail(channel_id: int, user: CurrentUser, db: DbSession):
+    ch = db.query(Channel).filter(Channel.id == channel_id, Channel.user_id == user.id).first()
+    if not ch:
+        raise HTTPException(status_code=404, detail="渠道不存在")
+    recs = (
+        db.query(Recommendation)
+        .options(joinedload(Recommendation.nodes), joinedload(Recommendation.channel))
+        .filter(Recommendation.user_id == user.id, Recommendation.channel_id == channel_id)
+        .order_by(Recommendation.recommend_date.desc())
+        .all()
+    )
+    periods = ensure_user_periods(db, user.id)
+    period_stats = []
+    for i, p in enumerate(periods):
+        vals = collect_node_values(recs, i)
+        win_rate, avg = stats_from_values(vals)
+        period_stats.append(
+            {
+                "label": p.label,
+                "days": p.days,
+                "sample": len(vals),
+                "win_rate": win_rate,
+                "avg_return": avg,
+            }
+        )
+    all_vals = []
+    for r in recs:
+        for n in r.nodes:
+            if n.status == NodeStatus.done and n.pct_change is not None:
+                all_vals.append(n.pct_change)
+    win_rate, avg = stats_from_values(all_vals)
+    return {
+        "channel": ChannelOut.model_validate(ch),
+        "stats": {
+            "record_count": len(recs),
+            "win_rate": win_rate,
+            "avg_return": avg,
+            "stock_count": len({r.stock_code for r in recs}),
+        },
+        "period_stats": period_stats,
+        "records": [rec_to_out(r) for r in recs],
+    }
+
+
+def _delete_rec_by_id(db: DbSession, rec_id: int, user_id: int) -> MessageOut:
+    from app.services.stats import load_recommendation
+
+    rec = load_recommendation(db, rec_id, user_id)
+    if not rec:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    _do_delete_recommendation(db, rec)
+    return MessageOut(message="推荐记录已删除")
+
+
+@router.post("/delete", response_model=MessageOut)
+def delete_recommendation_by_id(body: IdIn, user: CurrentUser, db: DbSession):
+    """POST /delete?id 形式，避免部分环境路由异常。"""
+    return _delete_rec_by_id(db, body.id, user.id)
+
+
 @router.get("/{rec_id}", response_model=RecommendationOut)
 def get_recommendation(rec_id: int, user: CurrentUser, db: DbSession):
     from app.services.stats import load_recommendation
@@ -211,19 +273,12 @@ def update_recommendation(rec_id: int, body: RecommendationUpdateIn, user: Curre
 
 @router.delete("/{rec_id}", response_model=MessageOut)
 def delete_recommendation(rec_id: int, user: CurrentUser, db: DbSession):
-    from app.services.stats import load_recommendation
-
-    rec = load_recommendation(db, rec_id, user.id)
-    if not rec:
-        raise HTTPException(status_code=404, detail="记录不存在")
-    _do_delete_recommendation(db, rec)
-    return MessageOut(message="推荐记录已删除")
+    return _delete_rec_by_id(db, rec_id, user.id)
 
 
 @router.post("/{rec_id}/delete", response_model=MessageOut)
 def delete_recommendation_post(rec_id: int, user: CurrentUser, db: DbSession):
-    """POST 删除（兼容部分环境拦截 DELETE 方法）。"""
-    return delete_recommendation(rec_id, user, db)
+    return _delete_rec_by_id(db, rec_id, user.id)
 
 
 @router.post("/{rec_id}/refetch", response_model=FetchResultOut)
@@ -245,48 +300,3 @@ def load_rec(db, rec_id):
         .filter(Recommendation.id == rec_id)
         .first()
     )
-
-
-@router.get("/channels/{channel_id}/detail")
-def channel_detail(channel_id: int, user: CurrentUser, db: DbSession):
-    ch = db.query(Channel).filter(Channel.id == channel_id, Channel.user_id == user.id).first()
-    if not ch:
-        raise HTTPException(status_code=404, detail="渠道不存在")
-    recs = (
-        db.query(Recommendation)
-        .options(joinedload(Recommendation.nodes), joinedload(Recommendation.channel))
-        .filter(Recommendation.user_id == user.id, Recommendation.channel_id == channel_id)
-        .order_by(Recommendation.recommend_date.desc())
-        .all()
-    )
-    periods = ensure_user_periods(db, user.id)
-    period_stats = []
-    for i, p in enumerate(periods):
-        vals = collect_node_values(recs, i)
-        win_rate, avg = stats_from_values(vals)
-        period_stats.append(
-            {
-                "label": p.label,
-                "days": p.days,
-                "sample": len(vals),
-                "win_rate": win_rate,
-                "avg_return": avg,
-            }
-        )
-    all_vals = []
-    for r in recs:
-        for n in r.nodes:
-            if n.status == NodeStatus.done and n.pct_change is not None:
-                all_vals.append(n.pct_change)
-    win_rate, avg = stats_from_values(all_vals)
-    return {
-        "channel": ChannelOut.model_validate(ch),
-        "stats": {
-            "record_count": len(recs),
-            "win_rate": win_rate,
-            "avg_return": avg,
-            "stock_count": len({r.stock_code for r in recs}),
-        },
-        "period_stats": period_stats,
-        "records": [rec_to_out(r) for r in recs],
-    }
