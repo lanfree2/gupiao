@@ -34,11 +34,19 @@ class User(Base):
     nickname: Mapped[str] = mapped_column(String(64), default="用户")
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.user)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    invite_code: Mapped[str | None] = mapped_column(String(16), unique=True, index=True, nullable=True)
+    invited_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     periods: Mapped[list["UserPeriod"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     channels: Mapped[list["Channel"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     recommendations: Mapped[list["Recommendation"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    inviter: Mapped["User | None"] = relationship(
+        "User", remote_side="User.id", foreign_keys=[invited_by_id], back_populates="invitees"
+    )
+    invitees: Mapped[list["User"]] = relationship(
+        "User", back_populates="inviter", foreign_keys=[invited_by_id]
+    )
 
 
 class SmsCode(Base):
@@ -51,6 +59,13 @@ class SmsCode(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     used: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(String(512), default="")
 
 
 class UserPeriod(Base):

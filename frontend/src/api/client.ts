@@ -30,17 +30,20 @@ async function deleteWithFallback(id: number, kind: 'rec' | 'channel' | 'admin-r
   const attempts: { method: 'POST' | 'DELETE'; path: string; body?: string }[] =
     kind === 'rec'
       ? [
+          { method: 'POST', path: '/recommendations/remove', body: JSON.stringify({ id }) },
           { method: 'POST', path: '/recommendations/delete', body: JSON.stringify({ id }) },
           { method: 'POST', path: `/recommendations/${id}/delete` },
           { method: 'DELETE', path: `/recommendations/${id}` },
         ]
       : kind === 'channel'
         ? [
+            { method: 'POST', path: '/channels/remove', body: JSON.stringify({ id }) },
             { method: 'POST', path: '/channels/delete', body: JSON.stringify({ id }) },
             { method: 'POST', path: `/channels/${id}/delete` },
             { method: 'DELETE', path: `/channels/${id}` },
           ]
         : [
+            { method: 'POST', path: '/admin/recommendations/remove', body: JSON.stringify({ id }) },
             { method: 'POST', path: '/admin/recommendations/delete', body: JSON.stringify({ id }) },
             { method: 'POST', path: `/admin/recommendations/${id}/delete` },
             { method: 'DELETE', path: `/admin/recommendations/${id}` },
@@ -52,7 +55,12 @@ async function deleteWithFallback(id: number, kind: 'rec' | 'channel' | 'admin-r
       return await request(path, { method, body })
     } catch (e) {
       lastErr = e instanceof Error ? e : new Error('删除失败')
-      if (!lastErr.message.includes('Not Found') && !lastErr.message.includes('接口不存在')) {
+      const retryable =
+        lastErr.message.includes('Not Found') ||
+        lastErr.message.includes('接口不存在') ||
+        lastErr.message.includes('Method Not Allowed') ||
+        lastErr.message.includes('405')
+      if (!retryable) {
         throw lastErr
       }
     }
@@ -68,7 +76,8 @@ export const api = {
     request<T>(path, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 
-  smsConfig: () => api.get<{ enabled: boolean; mock_mode: boolean; mock_hint?: string }>('/auth/sms/config'),
+  smsConfig: () => api.get<{ enabled: boolean; mock_mode: boolean; mock_hint?: string; register_sms_required?: boolean }>('/auth/sms/config'),
+  registerConfig: () => api.get<{ sms_required: boolean; sms: { enabled: boolean; mock_mode: boolean; mock_hint?: string } }>('/auth/register/config'),
   sendSms: (phone: string, purpose: string) => api.post('/auth/sms/send', { phone, purpose }),
   register: (body: object) => api.post<{ access_token: string; user: User }>('/auth/register', body),
   login: (body: object) => api.post<{ access_token: string; user: User }>('/auth/login', body),
@@ -95,6 +104,11 @@ export const api = {
   stockClose: (code: string, tradeDate: string) =>
     api.get(`/stocks/close?code=${encodeURIComponent(code)}&trade_date=${tradeDate}`),
 
+  inviteMe: () => api.get<{ invite_code: string; invite_path: string; invitee_count: number }>('/invites/me'),
+  invitees: () => api.get<Array<{ id: number; nickname: string; phone_masked: string; record_count: number; channel_count: number; created_at: string }>>('/invites/invitees'),
+  inviteeChannels: (id: number) => api.get(`/invites/invitees/${id}/channels`),
+  inviteeRecommendations: (id: number) => api.get(`/invites/invitees/${id}/recommendations`),
+
   adminDashboard: () => api.get('/admin/dashboard'),
   adminStocks: (q?: string) => api.get(`/admin/stocks${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   adminStock: (code: string) => api.get(`/admin/stocks/${code}`),
@@ -115,6 +129,11 @@ export const api = {
   },
   runWorker: () => api.post('/admin/worker/run'),
   adminDeleteRec: (id: number) => deleteWithFallback(id, 'admin-rec'),
+  adminUsers: (q?: string) => api.get(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  adminBindInviter: (userId: number, body: { inviter_id?: number | null; invite_code?: string | null }) =>
+    api.put(`/admin/users/${userId}/inviter`, body),
+  adminSettings: () => api.get<{ register_sms_required: boolean }>('/admin/settings'),
+  adminSaveSettings: (body: { register_sms_required: boolean }) => api.put('/admin/settings', body),
 }
 
 export function fmtPct(v: number | null | undefined) {

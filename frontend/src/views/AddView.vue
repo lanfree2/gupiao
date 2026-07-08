@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { toast } from '@/utils/toast'
+import PeriodSettingsModal from '@/components/PeriodSettingsModal.vue'
 import type { ChannelStatsOut, PeriodOut } from '@/types/api'
 
 const NEW = '__new__'
@@ -20,6 +21,7 @@ const priceHint = ref('')
 const reason = ref('')
 const error = ref('')
 const loading = ref(false)
+const showPeriodModal = ref(false)
 const nameTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 const priceTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
@@ -181,7 +183,10 @@ onMounted(loadMeta)
 
       <div>
         <div class="card">
-          <div class="card-head"><h3>追踪周期</h3></div>
+          <div class="card-head">
+            <h3>追踪周期</h3>
+            <a href="#" @click.prevent="showPeriodModal = true">⚙ 自定义周期</a>
+          </div>
           <div class="card-body">
             <p style="color:var(--t2);font-size:13.5px;margin-bottom:14px;line-height:1.7">
               保存后系统将在各节点到期日自动抓取收盘价。若推荐日期较早，已到期节点会<strong>立即抓取历史行情</strong>。
@@ -215,5 +220,10 @@ onMounted(loadMeta)
         </div>
       </div>
     </div>
+    <PeriodSettingsModal
+      v-model:open="showPeriodModal"
+      :periods="periods"
+      @saved="(ps) => { periods = ps }"
+    />
   </div>
 </template>

@@ -3,7 +3,9 @@ from sqlalchemy.orm import joinedload
 
 from app.deps import CurrentAdmin, DbSession
 from app.models import Channel, NodeStatus, Recommendation, User, UserPeriod, UserRole
-from app.schemas import AdminChannelOut, IdIn, MessageOut, RecommendationOut, StockAggOut
+from app.schemas import AdminChannelOut, AdminSettingsIn, AdminSettingsOut, AdminUserOut, BindInviterIn, IdIn, MessageOut, RecommendationOut, StockAggOut
+from app.services.app_settings import REGISTER_SMS_REQUIRED, register_sms_required, set_bool
+from app.services.invites import ensure_invite_code, find_user_by_invite_code
 from app.services.stats import all_node_values, collect_node_values, rec_to_out, stats_from_values
 from app.services.tracking import ensure_user_periods
 
@@ -268,9 +270,14 @@ def refetch_recommendation(rec_id: int, db: DbSession, admin: CurrentAdmin):
     return {"reset_nodes": reset_count, **result}
 
 
+@router.post("/recommendations/remove", response_model=MessageOut)
+def admin_remove_recommendation_by_id(body: IdIn, db: DbSession, admin: CurrentAdmin):
+    return admin_delete_recommendation(body.id, db, admin)
+
+
 @router.post("/recommendations/delete", response_model=MessageOut)
 def admin_delete_recommendation_by_id(body: IdIn, db: DbSession, admin: CurrentAdmin):
-    return admin_delete_recommendation(body.id, db, admin)
+    return admin_remove_recommendation_by_id(body, db, admin)
 
 
 @router.delete("/recommendations/{rec_id}", response_model=MessageOut)
@@ -291,3 +298,81 @@ def admin_delete_recommendation(rec_id: int, db: DbSession, admin: CurrentAdmin)
 @router.post("/recommendations/{rec_id}/delete", response_model=MessageOut)
 def admin_delete_recommendation_post(rec_id: int, db: DbSession, admin: CurrentAdmin):
     return admin_delete_recommendation(rec_id, db, admin)
+
+
+@router.get("/users", response_model=list[AdminUserOut])
+def admin_users(db: DbSession, admin: CurrentAdmin, q: str = ""):
+    users = (
+        db.query(User)
+        .options(joinedload(User.inviter))
+        .filter(User.role == UserRole.user)
+        .order_by(User.created_at.desc())
+        .all()
+    )
+    ql = q.strip().lower()
+    result = []
+    for u in users:
+        ensure_invite_code(db, u)
+        inviter = u.inviter
+        if ql:
+            matched = ql in u.phone.lower() or ql in u.nickname.lower()
+            if u.invite_code and ql in u.invite_code.lower():
+                matched = True
+            if inviter and (ql in inviter.nickname.lower() or ql in inviter.phone):
+                matched = True
+            if not matched:
+                continue
+        invitee_count = db.query(User).filter(User.invited_by_id == u.id).count()
+        result.append(
+            AdminUserOut(
+                id=u.id,
+                phone=u.phone,
+                nickname=u.nickname,
+                invite_code=u.invite_code,
+                inviter_id=inviter.id if inviter else None,
+                inviter_nickname=inviter.nickname if inviter else None,
+                invitee_count=invitee_count,
+                created_at=u.created_at,
+            )
+        )
+    return result
+
+
+@router.put("/users/{user_id}/inviter", response_model=MessageOut)
+def admin_bind_inviter(user_id: int, body: BindInviterIn, db: DbSession, admin: CurrentAdmin):
+    user = db.query(User).filter(User.id == user_id, User.role == UserRole.user).first()
+    if not user:
+        raise HTTPException(404, "用户不存在")
+
+    if body.inviter_id is None and not body.invite_code:
+        user.invited_by_id = None
+        db.commit()
+        return MessageOut(message="已解除邀请关系")
+
+    inviter = None
+    if body.inviter_id is not None:
+        inviter = db.query(User).filter(User.id == body.inviter_id).first()
+    elif body.invite_code:
+        inviter = find_user_by_invite_code(db, body.invite_code)
+
+    if not inviter:
+        raise HTTPException(400, detail="邀请人不存在")
+    if inviter.id == user.id:
+        raise HTTPException(400, detail="不能邀请自己")
+    if inviter.role != UserRole.user and inviter.role != UserRole.admin:
+        raise HTTPException(400, detail="邀请人无效")
+
+    user.invited_by_id = inviter.id
+    db.commit()
+    return MessageOut(message=f"已绑定邀请人：{inviter.nickname}")
+
+
+@router.get("/settings", response_model=AdminSettingsOut)
+def admin_get_settings(db: DbSession, admin: CurrentAdmin):
+    return AdminSettingsOut(register_sms_required=register_sms_required(db))
+
+
+@router.put("/settings", response_model=AdminSettingsOut)
+def admin_update_settings(body: AdminSettingsIn, db: DbSession, admin: CurrentAdmin):
+    set_bool(db, REGISTER_SMS_REQUIRED, body.register_sms_required)
+    return AdminSettingsOut(register_sms_required=body.register_sms_required)

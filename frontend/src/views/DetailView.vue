@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { api, chipClass, fmtPct } from '@/api/client'
 import { tagColor } from '@/utils/colors'
 import { fmtDateShort, fmtPrice } from '@/utils/format'
+import { toast } from '@/utils/toast'
 import type { RecommendationOut } from '@/types/api'
 
 const route = useRoute()
@@ -89,14 +90,14 @@ async function deleteRec() {
   deleting.value = true
   errorMsg.value = ''
   try {
-    if (isAdminView.value) {
-      await api.adminDeleteRec(rec.value.id)
-    } else {
-      await api.deleteRec(rec.value.id)
-    }
+    const res = isAdminView.value
+      ? await api.adminDeleteRec(rec.value.id)
+      : await api.deleteRec(rec.value.id)
+    toast(res.message || '推荐记录已删除')
     router.push(backPath.value)
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : '删除失败'
+    toast(errorMsg.value)
   } finally {
     deleting.value = false
   }

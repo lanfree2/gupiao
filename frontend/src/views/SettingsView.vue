@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { api } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
 import { toast } from '@/utils/toast'
+
+const router = useRouter()
+const auth = useAuthStore()
 
 const oldPassword = ref('')
 const newPassword = ref('')
@@ -36,6 +40,12 @@ async function submit() {
     loading.value = false
   }
 }
+
+function logout() {
+  auth.logout()
+  toast('已退出登录')
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -64,6 +74,7 @@ async function submit() {
         </div>
         <p v-if="error" class="error">{{ error }}</p>
         <button type="button" class="btn btn-primary" :disabled="loading" @click="submit">保存修改</button>
+        <button type="button" class="btn btn-ghost logout-btn" @click="logout">退出登录</button>
       </div>
     </div>
   </div>

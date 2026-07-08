@@ -6,6 +6,7 @@ from app.schemas import (
     ChangePasswordIn,
     LoginIn,
     MessageOut,
+    RegisterConfigOut,
     RegisterIn,
     ResetPasswordSmsIn,
     SmsConfigOut,
@@ -13,14 +14,28 @@ from app.schemas import (
     TokenOut,
     UserOut,
 )
+from app.services.app_settings import register_sms_required
+from app.services.invites import ensure_invite_code, find_user_by_invite_code
 from app.services.sms import send_sms_code, sms_config, verify_sms_code
+from app.services.tracking import ensure_user_periods
 
 router = APIRouter(prefix="/auth", tags=["认证"])
 
 
+def _sms_config_out(db) -> SmsConfigOut:
+    cfg = sms_config()
+    cfg["register_sms_required"] = register_sms_required(db)
+    return SmsConfigOut(**cfg)
+
+
 @router.get("/sms/config", response_model=SmsConfigOut)
-def get_sms_config():
-    return sms_config()
+def get_sms_config(db: DbSession):
+    return _sms_config_out(db)
+
+
+@router.get("/register/config", response_model=RegisterConfigOut)
+def get_register_config(db: DbSession):
+    return RegisterConfigOut(sms_required=register_sms_required(db), sms=_sms_config_out(db))
 
 
 @router.post("/sms/send")
@@ -46,20 +61,33 @@ def send_sms(body: SmsSendIn, db: DbSession):
 def register(body: RegisterIn, db: DbSession):
     if db.query(User).filter(User.phone == body.phone).first():
         raise HTTPException(status_code=400, detail="手机号已注册")
-    if not verify_sms_code(db, body.phone, SmsPurpose.register, body.code):
-        raise HTTPException(status_code=400, detail="验证码错误或已过期")
+
+    sms_required = register_sms_required(db)
+    if sms_required:
+        if not body.code or len(body.code.strip()) != 6:
+            raise HTTPException(status_code=400, detail="请输入 6 位验证码")
+        if not verify_sms_code(db, body.phone, SmsPurpose.register, body.code.strip()):
+            raise HTTPException(status_code=400, detail="验证码错误或已过期")
+    elif body.code and body.code.strip():
+        if not verify_sms_code(db, body.phone, SmsPurpose.register, body.code.strip()):
+            raise HTTPException(status_code=400, detail="验证码错误或已过期")
+
+    inviter = find_user_by_invite_code(db, body.invite_code)
+    if body.invite_code and body.invite_code.strip() and not inviter:
+        raise HTTPException(status_code=400, detail="邀请码无效")
+
     user = User(
         phone=body.phone,
         password_hash=hash_password(body.password),
         nickname=body.nickname or "用户",
         role=UserRole.user,
+        invited_by_id=inviter.id if inviter else None,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
-    from app.services.tracking import ensure_user_periods
-
     ensure_user_periods(db, user.id)
+    ensure_invite_code(db, user)
     token = create_access_token(user.id, user.role.value)
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
 
@@ -71,6 +99,7 @@ def login(body: LoginIn, db: DbSession):
         raise HTTPException(status_code=401, detail="手机号或密码错误")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="账号已禁用")
+    ensure_invite_code(db, user)
     token = create_access_token(user.id, user.role.value)
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
 
@@ -101,5 +130,6 @@ def reset_password_sms(body: ResetPasswordSmsIn, db: DbSession):
 
 
 @router.get("/me", response_model=UserOut)
-def me(user: CurrentUser):
+def me(user: CurrentUser, db: DbSession):
+    ensure_invite_code(db, user)
     return UserOut.model_validate(user)

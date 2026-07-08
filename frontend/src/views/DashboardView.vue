@@ -10,6 +10,23 @@ import type { DashboardOut } from '@/types/api'
 const data = ref<DashboardOut | null>(null)
 const loading = ref(true)
 
+async function load() {
+  loading.value = true
+  try {
+    data.value = await api.dashboard() as DashboardOut
+  } finally {
+    loading.value = false
+  }
+}
+
+function onDeleted(id: number) {
+  if (data.value) {
+    data.value.recent = data.value.recent.filter((r) => r.id !== id)
+    data.value.tracking_count = Math.max(0, data.value.tracking_count - 1)
+  }
+  load()
+}
+
 const recentPeriods = computed(() => {
   const first = data.value?.recent[0]
   if (!first?.nodes.length) return []
@@ -27,13 +44,7 @@ const recentRows = computed(() => {
   })
 })
 
-onMounted(async () => {
-  try {
-    data.value = await api.dashboard() as DashboardOut
-  } finally {
-    loading.value = false
-  }
-})
+onMounted(load)
 </script>
 
 <template>
@@ -114,7 +125,7 @@ onMounted(async () => {
           <h3>最近录入</h3>
           <RouterLink to="/tracking">全部 →</RouterLink>
         </div>
-        <RecTable :rows="recentRows" :periods="recentPeriods" from="tracking" empty-title="暂无记录" empty-desc="录入第一条推荐" />
+        <RecTable :rows="recentRows" :periods="recentPeriods" from="tracking" empty-title="暂无记录" empty-desc="录入第一条推荐" @deleted="onDeleted" />
       </div>
     </template>
   </div>

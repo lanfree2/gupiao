@@ -4,12 +4,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(".env", "../.env"),
+        # .env.dev 覆盖 .env，本地无需 Docker 即可用 SQLite；Docker 里环境变量优先级更高
+        env_file=("../.env", "../.env.dev", ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
-    app_name: str = "荐迹"
+    app_name: str = "嘉岭佰"
     env: str = "development"
     secret_key: str = "dev-secret-change-me"
     jwt_expire_hours: int = 168

@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { tagColor } from '@/utils/colors'
 import { fmtPctVal } from '@/utils/format'
-import type { ChannelStatsOut } from '@/types/api'
+import { toast } from '@/utils/toast'
+import PeriodSettingsModal from '@/components/PeriodSettingsModal.vue'
+import type { ChannelStatsOut, PeriodOut, RecommendationOut } from '@/types/api'
+import RecTable from '@/components/RecTable.vue'
 
 const router = useRouter()
 const channels = ref<ChannelStatsOut[]>([])
+const records = ref<RecommendationOut[]>([])
+const channelFilter = ref('')
 const loading = ref(true)
 const showModal = ref(false)
 const editId = ref<number | null>(null)
@@ -17,16 +22,45 @@ const formDesc = ref('')
 const saving = ref(false)
 const deleting = ref(false)
 const errorMsg = ref('')
+const showPeriodModal = ref(false)
+const periods = ref<PeriodOut[]>([])
 
 const colors = ['blue', 'green', 'orange', 'purple', 'gray']
+
+const filteredRecords = computed(() => {
+  if (!channelFilter.value) return records.value
+  const id = Number(channelFilter.value)
+  return records.value.filter((r) => r.channel_id === id)
+})
+
+function recordCountForChannel(channelId: number) {
+  return records.value.filter((r) => r.channel_id === channelId).length
+}
 
 async function load() {
   loading.value = true
   try {
-    channels.value = await api.channels() as ChannelStatsOut[]
+    const [chs, ps, recs] = await Promise.all([
+      api.channels() as Promise<ChannelStatsOut[]>,
+      api.periods() as Promise<PeriodOut[]>,
+      api.recommendations() as Promise<RecommendationOut[]>,
+    ])
+    channels.value = chs
+    periods.value = ps
+    records.value = recs.sort((a, b) => b.recommend_date.localeCompare(a.recommend_date))
   } finally {
     loading.value = false
   }
+}
+
+function onDeleted(id: number) {
+  records.value = records.value.filter((r) => r.id !== id)
+  load()
+}
+
+function openChannelRecords(ch: ChannelStatsOut) {
+  channelFilter.value = String(ch.id)
+  document.getElementById('channel-records')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function openCreate() {
@@ -72,11 +106,13 @@ async function deleteChannel() {
   deleting.value = true
   errorMsg.value = ''
   try {
-    await api.deleteChannel(editId.value)
+    const res = await api.deleteChannel(editId.value)
+    toast(res.message || '渠道已删除')
     showModal.value = false
     await load()
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : '删除失败'
+    toast(errorMsg.value)
   } finally {
     deleting.value = false
   }
@@ -93,6 +129,7 @@ onMounted(load)
         <p class="desc">管理您的消息来源分类 · 点击渠道卡片查看详细统计</p>
       </div>
       <div class="topbar-btns">
+        <button type="button" class="btn btn-ghost" @click="showPeriodModal = true">⚙ 周期设置</button>
         <button type="button" class="btn btn-primary" @click="openCreate">＋ 新建渠道</button>
       </div>
     </div>
@@ -115,8 +152,12 @@ onMounted(load)
           <span>均收益 <strong :class="ch.avg_return != null ? (ch.avg_return >= 0 ? 'up' : 'down') : ''">{{ fmtPctVal(ch.avg_return) }}</strong></span>
         </div>
         <div class="ch-foot">
-          <span style="font-size:12px;color:var(--t3)">点击查看详细统计 →</span>
+          <span style="font-size:12px;color:var(--t3)">
+            {{ recordCountForChannel(ch.id) }} 条历史记录 ·
+            <a href="#" @click.prevent.stop="openChannelRecords(ch)">查看记录</a>
+          </span>
           <span class="ch-actions">
+            <button type="button" class="btn btn-sm btn-ghost" @click.stop="router.push(`/channels/${ch.id}`)">统计</button>
             <button type="button" class="btn btn-sm btn-ghost" @click.stop="openEdit(ch)">编辑</button>
           </span>
         </div>
@@ -125,6 +166,25 @@ onMounted(load)
         <span style="font-size:26px">＋</span>
         <span>添加新渠道</span>
       </button>
+    </div>
+
+    <div id="channel-records" class="card only-table records-section">
+      <div class="card-head">
+        <h3>历史推荐记录（{{ filteredRecords.length }}）</h3>
+        <div class="head-filters">
+          <select v-model="channelFilter" class="form-control channel-filter">
+            <option value="">全部渠道</option>
+            <option v-for="ch in channels" :key="ch.id" :value="String(ch.id)">{{ ch.name }}</option>
+          </select>
+        </div>
+      </div>
+      <RecTable
+        :rows="filteredRecords"
+        from="tracking"
+        :empty-title="records.length ? '该渠道暂无记录' : '暂无历史记录'"
+        empty-desc="录入推荐后，记录会按渠道归类展示在这里"
+        @deleted="onDeleted"
+      />
     </div>
 
     <div class="modal-bg" :class="{ open: showModal }" @click.self="showModal = false">
@@ -159,5 +219,19 @@ onMounted(load)
         </div>
       </div>
     </div>
+
+    <PeriodSettingsModal
+      v-model:open="showPeriodModal"
+      :periods="periods"
+      @saved="(ps) => { periods = ps }"
+    />
   </div>
 </template>
+
+<style scoped>
+.records-section { margin-top: 8px; }
+.head-filters { display: flex; gap: 8px; align-items: center; }
+.channel-filter { min-width: 160px; padding: 8px 10px; font-size: 13px; }
+.ch-foot a { color: var(--accent); text-decoration: none; }
+.ch-foot a:hover { text-decoration: underline; }
+</style>

@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
-Write-Host "=== 荐迹 · 推送前检查 ===" -ForegroundColor Cyan
+Write-Host "=== 嘉岭佰 · 推送前检查 ===" -ForegroundColor Cyan
 
 # Git
 try {
@@ -49,7 +49,7 @@ Write-Host ""
 Write-Host "检查完成。可执行:" -ForegroundColor Green
 Write-Host "  git init"
 Write-Host "  git add ."
-Write-Host "  git commit -m `"feat: 荐迹 MVP`""
+Write-Host "  git commit -m `"feat: 嘉岭佰 MVP`""
 Write-Host "  git remote add origin https://github.com/你的用户名/仓库名.git"
 Write-Host "  git push -u origin main"
 Write-Host ""

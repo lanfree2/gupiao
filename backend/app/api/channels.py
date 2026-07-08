@@ -69,9 +69,14 @@ def update_channel(channel_id: int, body: ChannelIn, user: CurrentUser, db: DbSe
     return ChannelOut.model_validate(ch)
 
 
+@router.post("/remove", response_model=MessageOut)
+def remove_channel_by_id(body: IdIn, user: CurrentUser, db: DbSession):
+    return delete_channel(body.id, user, db)
+
+
 @router.post("/delete", response_model=MessageOut)
 def delete_channel_by_id(body: IdIn, user: CurrentUser, db: DbSession):
-    return delete_channel(body.id, user, db)
+    return remove_channel_by_id(body, user, db)
 
 
 @router.get("/{channel_id}", response_model=ChannelStatsOut)

@@ -22,7 +22,7 @@ function exitAdmin() {
   <div class="layout">
     <aside class="sidebar admin-side">
       <div class="brand">
-        <div class="brand-title">荐迹 <span class="admin-pill">ADMIN</span></div>
+        <div class="brand-title">嘉岭佰 <span class="admin-pill">ADMIN</span></div>
         <small>平台运营 · 全站数据</small>
       </div>
       <nav class="nav">
@@ -43,6 +43,10 @@ function exitAdmin() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
           推荐记录
         </RouterLink>
+        <RouterLink to="/admin/users" class="nav-link" :class="{ active: navActive('/admin/users') }">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          用户邀请
+        </RouterLink>
         <div class="theme-switch">
           <span>{{ label }}</span>
           <div class="theme-toggle" role="button" tabindex="0" @click="toggle" @keyup.enter="toggle" />
@@ -54,6 +58,13 @@ function exitAdmin() {
     </aside>
 
     <main class="main">
+      <div class="mobile-top admin-mobile-top">
+        <div class="bt">嘉岭佰<small>管理后台</small></div>
+        <div class="mobile-top-actions">
+          <button type="button" class="mini-theme" @click="toggle">{{ label === '深色' ? '🌙' : '☀' }}</button>
+          <button type="button" class="mini-logout" @click="exitAdmin">退出</button>
+        </div>
+      </div>
       <div class="main-inner">
         <RouterView />
       </div>

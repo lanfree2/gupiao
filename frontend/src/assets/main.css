@@ -46,7 +46,20 @@ a{cursor:pointer;color:var(--accent);text-decoration:none}
 .login-feat strong{display:block;font-size:15px;color:#e8edf8;font-weight:500;margin-bottom:2px}
 .login-feat span{font-size:13px;color:#8d99b8}
 .login-panel{display:flex;align-items:center;justify-content:center;padding:48px 24px;background:var(--bg)}
-.login-box{width:100%;max-width:380px}
+.login-box{width:100%;max-width:380px;padding-bottom:24px}
+.login-panel{overflow-y:auto}
+.register-panel{max-height:calc(100vh - 120px);overflow-y:auto;padding-right:4px}
+.field input{width:100%;padding:13px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-sm);color:var(--ink)}
+.mobile-top-actions{display:flex;align-items:center;gap:8px}
+.mini-logout{padding:6px 12px;border-radius:999px;border:1px solid var(--border-strong);background:var(--surface);font-size:12px;color:var(--t2);cursor:pointer}
+.user-exit{margin-top:8px}
+.user-exit button{color:var(--side-dim)}
+.logout-btn{margin-top:12px;width:100%;justify-content:center}
+.admin-mobile-top{display:none}
+@media (max-width:1024px){
+  .admin-mobile-top{display:flex}
+  .admin-side~.main .mobile-top.admin-mobile-top{align-items:center}
+}
 .auth-brand{display:none;text-align:center;margin-bottom:24px}
 .auth-brand .bt{font-family:var(--serif);font-size:26px;font-weight:700}
 .auth-brand small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--t3);margin-top:2px}
@@ -57,7 +70,6 @@ a{cursor:pointer;color:var(--accent);text-decoration:none}
 .login-box .sub{color:var(--t2);font-size:13.5px;margin-bottom:26px}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:13px;font-weight:500;color:var(--t2);margin-bottom:7px}
-.field input{width:100%;padding:13px 14px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-sm)}
 .field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
 .code-row{display:flex;gap:10px}
 .code-row input{flex:1;min-width:0}

@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/utils/theme'
 import { toast } from '@/utils/toast'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const { label, toggle } = useTheme()
 
@@ -16,6 +17,9 @@ const password = ref('demo123456')
 const regPhone = ref('')
 const regCode = ref('')
 const regPass = ref('')
+const regPass2 = ref('')
+const regInvite = ref('')
+const smsRequired = ref(false)
 const agree = ref(false)
 const error = ref('')
 const loading = ref(false)
@@ -25,9 +29,23 @@ let codeTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
   try {
-    const cfg = await api.smsConfig()
-    if (cfg.mock_hint) mockHint.value = cfg.mock_hint
+    const cfg = await api.registerConfig()
+    smsRequired.value = cfg.sms_required
+    if (cfg.sms.mock_hint) mockHint.value = cfg.sms.mock_hint
   } catch { /* ignore */ }
+  const invite = route.query.invite
+  if (typeof invite === 'string' && invite.trim()) {
+    regInvite.value = invite.trim().toUpperCase()
+    tab.value = 'register'
+  }
+  if (route.query.tab === 'register') tab.value = 'register'
+})
+
+watch(() => route.query.invite, (v) => {
+  if (typeof v === 'string' && v.trim()) {
+    regInvite.value = v.trim().toUpperCase()
+    tab.value = 'register'
+  }
 })
 
 async function doLogin() {
@@ -75,12 +93,18 @@ async function doRegister() {
     error.value = '请输入正确的手机号'
     return
   }
-  if (regCode.value.trim().length !== 6) {
-    error.value = '请输入 6 位验证码'
-    return
+  if (smsRequired.value) {
+    if (regCode.value.trim().length !== 6) {
+      error.value = '请输入 6 位验证码'
+      return
+    }
   }
   if (regPass.value.length < 6) {
     error.value = '密码至少 6 位'
+    return
+  }
+  if (regPass.value !== regPass2.value) {
+    error.value = '两次输入的密码不一致'
     return
   }
   if (!agree.value) {
@@ -89,11 +113,13 @@ async function doRegister() {
   }
   loading.value = true
   try {
-    const res = await api.register({
+    const body: Record<string, string> = {
       phone: regPhone.value.trim(),
-      code: regCode.value.trim(),
       password: regPass.value,
-    })
+    }
+    if (smsRequired.value || regCode.value.trim()) body.code = regCode.value.trim()
+    if (regInvite.value.trim()) body.invite_code = regInvite.value.trim().toUpperCase()
+    const res = await api.register(body)
     auth.setSession(res.access_token, res.user)
     toast('注册成功')
     router.push('/dashboard')
@@ -109,7 +135,7 @@ async function doRegister() {
   <div class="login-wrap">
     <div class="login-hero">
       <div class="login-hero-inner">
-        <div class="login-kicker">JIANJI · TRACK EVERY CALL</div>
+        <div class="login-kicker">JIALINGBAI · TRACK EVERY CALL</div>
         <h1>每一条荐股，<br>都留下<em>可验证的足迹</em></h1>
         <p>把各个渠道的股票推荐录进来，系统自动追踪走势。时间久了，哪个消息来源靠谱，数据自己会说话。</p>
         <div class="login-feats">
@@ -121,7 +147,7 @@ async function doRegister() {
     </div>
     <div class="login-panel">
       <div class="login-box">
-        <div class="auth-brand"><div class="bt">荐迹</div><small>推荐来源 · 走势验证</small></div>
+        <div class="auth-brand"><div class="bt">嘉岭佰</div><small>推荐来源 · 走势验证</small></div>
         <div class="auth-tabs">
           <button type="button" class="auth-tab" :class="{ active: tab === 'login' }" @click="tab = 'login'">登录</button>
           <button type="button" class="auth-tab" :class="{ active: tab === 'register' }" @click="tab = 'register'">注册</button>
@@ -137,21 +163,55 @@ async function doRegister() {
           <p class="auth-switch">还没有账号？<a @click.prevent="tab = 'register'">立即注册</a> · <RouterLink to="/forgot-password">忘记密码</RouterLink></p>
         </div>
 
-        <div v-else>
+        <div v-else class="register-panel">
           <h2>创建新账户</h2>
           <p class="sub">用手机号注册，一分钟开始追踪</p>
-          <div class="field"><label>手机号</label><input v-model="regPhone" type="tel" placeholder="请输入 11 位手机号" maxlength="11"></div>
           <div class="field">
+            <label>手机号</label>
+            <input v-model="regPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="请输入 11 位手机号" maxlength="11">
+          </div>
+          <div class="field">
+            <label>设置密码</label>
+            <input
+              v-model="regPass"
+              type="password"
+              autocomplete="new-password"
+              placeholder="至少 6 位"
+              minlength="6"
+            >
+          </div>
+          <div class="field">
+            <label>确认密码</label>
+            <input
+              v-model="regPass2"
+              type="password"
+              autocomplete="new-password"
+              placeholder="再次输入密码"
+              minlength="6"
+            >
+          </div>
+          <div v-if="regInvite" class="field">
+            <label>邀请码</label>
+            <input v-model="regInvite" class="mono" readonly>
+          </div>
+          <div v-if="smsRequired" class="field">
             <label>短信验证码</label>
             <div class="code-row">
-              <input v-model="regCode" type="text" placeholder="6 位验证码" maxlength="6">
+              <input v-model="regCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6 位验证码" maxlength="6">
               <button type="button" class="code-btn" :disabled="codeCooldown > 0" @click="sendCode">
                 {{ codeCooldown > 0 ? `${codeCooldown}s` : '获取验证码' }}
               </button>
             </div>
             <p v-if="mockHint" class="form-hint">{{ mockHint }}</p>
           </div>
-          <div class="field"><label>设置密码</label><input v-model="regPass" type="password" placeholder="至少 6 位"></div>
+          <div v-else class="field">
+            <label>短信验证码（可选）</label>
+            <div class="code-row">
+              <input v-model="regCode" type="text" inputmode="numeric" placeholder="可不填" maxlength="6">
+              <button type="button" class="code-btn" :disabled="codeCooldown > 0" @click="sendCode">获取验证码</button>
+            </div>
+            <p class="form-hint">当前注册无需验证码；如需验证可自愿填写</p>
+          </div>
           <label class="agree">
             <input v-model="agree" type="checkbox">
             <span>我已阅读并同意《用户协议》与《隐私政策》</span>

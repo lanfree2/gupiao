@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, chipClass, fmtPct } from '@/api/client'
 import { tagColor } from '@/utils/colors'
 import { fmtDateShort, fmtPrice } from '@/utils/format'
+import { toast } from '@/utils/toast'
 import type { RecommendationOut } from '@/types/api'
 
 const props = withDefaults(
@@ -26,9 +27,10 @@ const props = withDefaults(
   },
 )
 
-const emit = defineEmits<{ deleted: [] }>()
+const emit = defineEmits<{ deleted: [id: number] }>()
 
 const router = useRouter()
+const deletingId = ref<number | null>(null)
 
 const nodeLabels = computed(() => {
   if (props.periods.length) return props.periods
@@ -42,11 +44,15 @@ function openDetail(id: number) {
 
 async function deleteRow(row: RecommendationOut) {
   if (!confirm(`确定删除「${row.stock_name}」？`)) return
+  deletingId.value = row.id
   try {
-    await api.deleteRec(row.id)
-    emit('deleted')
+    const res = await api.deleteRec(row.id)
+    toast(res.message || '推荐记录已删除')
+    emit('deleted', row.id)
   } catch (e) {
-    alert(e instanceof Error ? e.message : '删除失败')
+    toast(e instanceof Error ? e.message : '删除失败')
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -99,8 +105,9 @@ function chipAlpha(v: number | null | undefined) {
             <button
               v-if="showDelete && from !== 'admin'"
               class="btn btn-sm btn-danger"
+              :disabled="deletingId === row.id"
               @click.stop="deleteRow(row)"
-            >删除</button>
+            >{{ deletingId === row.id ? '删除中…' : '删除' }}</button>
           </td>
         </tr>
       </tbody>

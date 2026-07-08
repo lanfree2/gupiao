@@ -9,7 +9,7 @@ fi
 
 docker compose up -d --build
 echo ""
-echo "荐迹已启动: http://localhost"
+echo "嘉岭佰已启动: http://localhost"
 echo "API 文档:   http://localhost:8000/docs"
 echo "演示账号:   13888888888 / demo123456"
 echo "管理后台:   http://localhost/admin/login"

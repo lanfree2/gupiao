@@ -15,9 +15,10 @@ from app.schemas import (
     RecommendationOut,
     RecommendationUpdateIn,
 )
-from app.services.market_data import get_close_on_or_before, lookup_stock_name
+from app.services.market_data import get_close_on_or_before, lookup_stock_name, prefetch_close_prices
 from app.services.stats import collect_node_values, rec_to_out, stats_from_values
 from app.services.tracking import (
+    add_trading_days,
     create_tracking_nodes,
     ensure_user_periods,
     process_recommendation_due_nodes,
@@ -112,6 +113,7 @@ def search_recommendations(
     )
     items = query.all()
     if not q:
+        items = sorted(items, key=lambda r: r.recommend_date, reverse=True)
         return [RecommendationOut(**rec_to_out(r)) for r in items]
     ql = q.lower()
     result = []
@@ -182,10 +184,15 @@ def _delete_rec_by_id(db: DbSession, rec_id: int, user_id: int) -> MessageOut:
     return MessageOut(message="推荐记录已删除")
 
 
+@router.post("/remove", response_model=MessageOut)
+def remove_recommendation_by_id(body: IdIn, user: CurrentUser, db: DbSession):
+    """删除推荐（POST /remove，避免部分代理对 delete 路径返回 405）。"""
+    return _delete_rec_by_id(db, body.id, user.id)
+
+
 @router.post("/delete", response_model=MessageOut)
 def delete_recommendation_by_id(body: IdIn, user: CurrentUser, db: DbSession):
-    """POST /delete?id 形式，避免部分环境路由异常。"""
-    return _delete_rec_by_id(db, body.id, user.id)
+    return remove_recommendation_by_id(body, user, db)
 
 
 @router.get("/{rec_id}", response_model=RecommendationOut)
@@ -222,6 +229,9 @@ def create_recommendation(body: RecommendationIn, user: CurrentUser, db: DbSessi
 
     stock_name = body.stock_name or lookup_stock_name(body.stock_code) or "未知"
     stock_code = body.stock_code.strip()
+    periods = ensure_user_periods(db, user.id)
+    due_dates = [add_trading_days(body.recommend_date, p.days) for p in periods]
+    prefetch_close_prices(db, stock_code, [body.recommend_date, *due_dates])
     recommend_price = _resolve_recommend_price(db, stock_code, body.recommend_date, body.recommend_price)
     rec = Recommendation(
         user_id=user.id,
@@ -234,7 +244,6 @@ def create_recommendation(body: RecommendationIn, user: CurrentUser, db: DbSessi
     )
     db.add(rec)
     db.flush()
-    periods = ensure_user_periods(db, user.id)
     create_tracking_nodes(db, rec, periods)
     fetch_raw = _safe_fetch_nodes(db, rec.id)
     rec = load_rec(db, rec.id)

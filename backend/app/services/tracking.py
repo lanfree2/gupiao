@@ -3,7 +3,7 @@ from datetime import date, datetime
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import NodeStatus, Recommendation, TrackingNode, UserPeriod
-from app.services.market_data import add_trading_days, get_close_on_or_before
+from app.services.market_data import add_trading_days, get_close_on_or_before, prefetch_close_prices
 
 
 DEFAULT_PERIODS = [
@@ -94,6 +94,14 @@ def process_due_nodes(db: Session, as_of: date | None = None) -> dict:
         .filter(TrackingNode.status == NodeStatus.pending, TrackingNode.due_date <= today)
         .all()
     )
+    if not nodes:
+        return {"processed": 0, "done": 0, "failed": 0}
+    by_stock: dict[str, list[date]] = {}
+    for node in nodes:
+        code = node.recommendation.stock_code
+        by_stock.setdefault(code, []).append(node.due_date)
+    for code, dates in by_stock.items():
+        prefetch_close_prices(db, code, dates)
     return _fetch_pending_nodes(db, nodes)
 
 
@@ -112,6 +120,10 @@ def process_recommendation_due_nodes(
         )
         .all()
     )
+    if not nodes:
+        return {"processed": 0, "done": 0, "failed": 0}
+    rec = nodes[0].recommendation
+    prefetch_close_prices(db, rec.stock_code, [n.due_date for n in nodes])
     return _fetch_pending_nodes(db, nodes)
 
 

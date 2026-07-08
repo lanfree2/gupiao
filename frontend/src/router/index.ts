@@ -21,6 +21,7 @@ const router = createRouter({
         { path: 'channels/:id', component: () => import('@/views/ChannelDetailView.vue') },
         { path: 'recommendations/:id', component: () => import('@/views/DetailView.vue') },
         { path: 'settings', component: () => import('@/views/SettingsView.vue') },
+        { path: 'invites', component: () => import('@/views/InvitesView.vue') },
       ],
     },
     {
@@ -35,6 +36,7 @@ const router = createRouter({
         { path: 'channels', component: () => import('@/views/admin/AdminChannels.vue') },
         { path: 'channels/:id', component: () => import('@/views/admin/AdminChannelDetail.vue') },
         { path: 'records', component: () => import('@/views/admin/AdminRecords.vue') },
+        { path: 'users', component: () => import('@/views/admin/AdminUsers.vue') },
       ],
     },
   ],

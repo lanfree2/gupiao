@@ -29,6 +29,14 @@ async function load() {
   }
 }
 
+function onDeleted(id: number) {
+  if (detail.value) {
+    detail.value.records = detail.value.records.filter((r) => r.id !== id)
+    detail.value.stats.record_count = Math.max(0, detail.value.stats.record_count - 1)
+  }
+  load()
+}
+
 onMounted(load)
 </script>
 
@@ -64,6 +72,20 @@ onMounted(load)
         </div>
       </div>
 
+      <div class="card only-table">
+        <div class="card-head">
+          <h3>历史推荐记录（{{ detail.records.length }}）</h3>
+          <RouterLink :to="`/tracking?channel=${detail.channel.id}`" class="btn btn-sm btn-ghost">在追踪中查看</RouterLink>
+        </div>
+        <RecTable
+          :rows="detail.records"
+          from="tracking"
+          empty-title="该渠道暂无历史记录"
+          empty-desc="录入推荐时选择此渠道，记录会出现在这里"
+          @deleted="onDeleted"
+        />
+      </div>
+
       <div class="grid-2">
         <div class="card">
           <div class="card-head"><h3>各周期胜率</h3></div>
@@ -95,11 +117,6 @@ onMounted(load)
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="card only-table">
-        <div class="card-head"><h3>该渠道全部推荐</h3></div>
-        <RecTable :rows="detail.records" from="tracking" />
       </div>
 
       <RouterLink to="/channels" class="btn btn-ghost">← 返回渠道列表</RouterLink>

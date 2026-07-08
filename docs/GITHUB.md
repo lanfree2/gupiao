@@ -1,6 +1,6 @@
 # 发布到 GitHub
 
-本文说明如何把「荐迹」项目上传到 GitHub，并在服务器上拉取部署。
+本文说明如何把「嘉岭佰」项目上传到 GitHub，并在服务器上拉取部署。
 
 ---
 
@@ -60,7 +60,7 @@ git init
 git add .
 
 # 首次提交
-git commit -m "feat: 荐迹 MVP - FastAPI + Vue3 + Docker"
+git commit -m "feat: 嘉岭佰 MVP - FastAPI + Vue3 + Docker"
 
 # 关联远程仓库（把 URL 换成你的）
 git remote add origin https://github.com/你的用户名/jianji.git

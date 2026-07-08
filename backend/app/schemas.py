@@ -14,6 +14,12 @@ class SmsConfigOut(BaseModel):
     mock_mode: bool
     mock_hint: str | None = None
     provider: str
+    register_sms_required: bool = False
+
+
+class RegisterConfigOut(BaseModel):
+    sms_required: bool
+    sms: SmsConfigOut
 
 
 class SmsSendIn(BaseModel):
@@ -30,9 +36,10 @@ class SmsSendIn(BaseModel):
 
 class RegisterIn(BaseModel):
     phone: str
-    code: str
+    code: str = ""
     password: str = Field(min_length=6, max_length=64)
     nickname: str = "用户"
+    invite_code: str | None = None
 
     @field_validator("phone")
     @classmethod
@@ -70,9 +77,49 @@ class UserOut(BaseModel):
     phone: str
     nickname: str
     role: str
+    invite_code: str | None = None
 
     class Config:
         from_attributes = True
+
+
+class InviteeOut(BaseModel):
+    id: int
+    nickname: str
+    phone_masked: str
+    record_count: int
+    channel_count: int
+    created_at: datetime
+
+
+class InviteInfoOut(BaseModel):
+    invite_code: str
+    invite_path: str
+    invitee_count: int
+
+
+class AdminUserOut(BaseModel):
+    id: int
+    phone: str
+    nickname: str
+    invite_code: str | None
+    inviter_id: int | None
+    inviter_nickname: str | None
+    invitee_count: int
+    created_at: datetime
+
+
+class AdminSettingsOut(BaseModel):
+    register_sms_required: bool
+
+
+class AdminSettingsIn(BaseModel):
+    register_sms_required: bool
+
+
+class BindInviterIn(BaseModel):
+    inviter_id: int | None = None
+    invite_code: str | None = None
 
 
 class PeriodIn(BaseModel):

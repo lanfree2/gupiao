@@ -49,7 +49,7 @@ async function submit() {
     </div>
     <div class="login-panel">
       <div class="login-box">
-        <div class="auth-brand"><div class="bt">荐迹</div><small>管理后台</small></div>
+        <div class="auth-brand"><div class="bt">嘉岭佰</div><small>管理后台</small></div>
         <h2>管理员登录</h2>
         <p class="sub">仅限平台运营人员访问 · 演示 13800000000 / admin123</p>
         <div class="field"><label>管理员手机号</label><input v-model="phone" type="tel"></div>

@@ -24,6 +24,11 @@ async function search() {
   }
 }
 
+function onDeleted(id: number) {
+  rows.value = rows.value.filter((r) => r.id !== id)
+  search()
+}
+
 let timer: ReturnType<typeof setTimeout> | null = null
 watch([q, scope], () => {
   if (timer) clearTimeout(timer)
@@ -61,7 +66,7 @@ search()
         <h3>{{ q ? `搜索结果（${rows.length} 条）` : `我的全部记录（${rows.length} 条）` }}</h3>
       </div>
       <div v-if="loading" class="empty"><strong>搜索中…</strong></div>
-      <RecTable v-else :rows="rows" from="search" empty-title="未找到匹配记录" empty-desc="试试换个关键词" />
+      <RecTable v-else :rows="rows" from="search" empty-title="未找到匹配记录" empty-desc="试试换个关键词" @deleted="onDeleted" />
     </div>
   </div>
 </template>

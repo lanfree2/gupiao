@@ -88,7 +88,7 @@ async function submit() {
     </div>
     <div class="login-panel">
       <div class="login-box">
-        <div class="auth-brand"><div class="bt">荐迹</div><small>重置密码</small></div>
+        <div class="auth-brand"><div class="bt">嘉岭佰</div><small>重置密码</small></div>
         <h2>忘记密码</h2>
         <p class="sub">输入注册手机号并完成短信验证</p>
         <div class="field"><label>手机号</label><input v-model="phone" type="tel" maxlength="11"></div>
