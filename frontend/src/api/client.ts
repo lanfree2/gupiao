@@ -131,9 +131,10 @@ export const api = {
   adminDeleteRec: (id: number) => deleteWithFallback(id, 'admin-rec'),
   adminUsers: (q?: string) => api.get(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   adminBindInviter: (userId: number, body: { inviter_id?: number | null; invite_code?: string | null }) =>
-    api.put(`/admin/users/${userId}/inviter`, body),
+    api.put<{ message: string }>(`/admin/users/${userId}/inviter`, body),
   adminSettings: () => api.get<{ register_sms_required: boolean }>('/admin/settings'),
-  adminSaveSettings: (body: { register_sms_required: boolean }) => api.put('/admin/settings', body),
+  adminSaveSettings: (body: { register_sms_required: boolean }) =>
+    api.put<{ message: string }>('/admin/settings', body),
 }
 
 export function fmtPct(v: number | null | undefined) {
