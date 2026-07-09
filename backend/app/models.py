@@ -49,6 +49,17 @@ class User(Base):
     )
 
 
+class InviteeNote(Base):
+    __tablename__ = "invitee_notes"
+    __table_args__ = (UniqueConstraint("inviter_id", "invitee_id", name="uq_invitee_note"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    inviter_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    invitee_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    note: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class SmsCode(Base):
     __tablename__ = "sms_codes"
 

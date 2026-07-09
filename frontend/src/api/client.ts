@@ -105,8 +105,12 @@ export const api = {
     api.get(`/stocks/close?code=${encodeURIComponent(code)}&trade_date=${tradeDate}`),
 
   inviteMe: () => api.get<{ invite_code: string; invite_path: string; invitee_count: number }>('/invites/me'),
-  invitees: () => api.get<Array<{ id: number; nickname: string; phone_masked: string; record_count: number; channel_count: number; created_at: string }>>('/invites/invitees'),
+  inviteConfig: () => api.get<{ view_users: boolean; view_channels: boolean }>('/invites/config'),
+  invitees: () => api.get<Array<{ id: number; nickname: string; phone_masked: string; record_count: number; channel_count: number; created_at: string; note: string }>>('/invites/invitees'),
+  saveInviteeNote: (id: number, note: string) => api.put<{ message: string }>(`/invites/invitees/${id}/note`, { note }),
   inviteeChannels: (id: number) => api.get(`/invites/invitees/${id}/channels`),
+  inviteeChannelRecs: (inviteeId: number, channelId: number) =>
+    api.get(`/invites/invitees/${inviteeId}/channels/${channelId}/recommendations`),
   inviteeRecommendations: (id: number) => api.get(`/invites/invitees/${id}/recommendations`),
 
   adminDashboard: () => api.get('/admin/dashboard'),
@@ -132,8 +136,8 @@ export const api = {
   adminUsers: (q?: string) => api.get(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   adminBindInviter: (userId: number, body: { inviter_id?: number | null; invite_code?: string | null }) =>
     api.put<{ message: string }>(`/admin/users/${userId}/inviter`, body),
-  adminSettings: () => api.get<{ register_sms_required: boolean }>('/admin/settings'),
-  adminSaveSettings: (body: { register_sms_required: boolean }) =>
+  adminSettings: () => api.get<{ register_sms_required: boolean; invite_view_users: boolean; invite_view_channels: boolean }>('/admin/settings'),
+  adminSaveSettings: (body: { register_sms_required: boolean; invite_view_users: boolean; invite_view_channels: boolean }) =>
     api.put<{ message: string }>('/admin/settings', body),
 }
 

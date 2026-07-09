@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { api } from '@/api/client'
@@ -24,6 +24,8 @@ const deleting = ref(false)
 const errorMsg = ref('')
 const showPeriodModal = ref(false)
 const periods = ref<PeriodOut[]>([])
+
+const periodLabels = computed(() => periods.value.map((p) => p.label))
 
 const colors = ['blue', 'green', 'orange', 'purple', 'gray']
 
@@ -102,7 +104,7 @@ async function saveChannel() {
 
 async function deleteChannel() {
   if (!editId.value) return
-  if (!confirm('确定删除该渠道？仅无推荐记录的渠道可删除。')) return
+  if (!confirm('确定删除该渠道？仅无自选记录的渠道可删除。')) return
   deleting.value = true
   errorMsg.value = ''
   try {
@@ -170,7 +172,7 @@ onMounted(load)
 
     <div id="channel-records" class="card only-table records-section">
       <div class="card-head">
-        <h3>历史推荐记录（{{ filteredRecords.length }}）</h3>
+        <h3>历史自选记录（{{ filteredRecords.length }}）</h3>
         <div class="head-filters">
           <select v-model="channelFilter" class="form-control channel-filter">
             <option value="">全部渠道</option>
@@ -180,9 +182,10 @@ onMounted(load)
       </div>
       <RecTable
         :rows="filteredRecords"
+        :periods="periodLabels"
         from="tracking"
         :empty-title="records.length ? '该渠道暂无记录' : '暂无历史记录'"
-        empty-desc="录入推荐后，记录会按渠道归类展示在这里"
+        empty-desc="录入自选后，记录会按渠道归类展示在这里"
         @deleted="onDeleted"
       />
     </div>

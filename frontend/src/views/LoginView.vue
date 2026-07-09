@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
@@ -137,7 +137,7 @@ async function doRegister() {
       <div class="login-hero-inner">
         <div class="login-kicker">JIALINGBAI · TRACK EVERY CALL</div>
         <h1>每一条荐股，<br>都留下<em>可验证的足迹</em></h1>
-        <p>把各个渠道的股票推荐录进来，系统自动追踪走势。时间久了，哪个消息来源靠谱，数据自己会说话。</p>
+        <p>把各个渠道的股票自选录进来，系统自动追踪走势。时间久了，哪个消息来源靠谱，数据自己会说话。</p>
         <div class="login-feats">
           <div class="login-feat"><span class="no">01</span><div><strong>我的渠道分类</strong><span>按自己的消息来源建组，独立统计每个渠道的胜率</span></div></div>
           <div class="login-feat"><span class="no">02</span><div><strong>多周期自动追踪</strong><span>自定义追踪周期，节点到期自动抓取涨跌幅</span></div></div>
@@ -147,7 +147,7 @@ async function doRegister() {
     </div>
     <div class="login-panel">
       <div class="login-box">
-        <div class="auth-brand"><div class="bt">嘉岭佰</div><small>推荐来源 · 走势验证</small></div>
+        <div class="auth-brand"><div class="bt">嘉岭佰</div><small>自选来源 · 走势验证</small></div>
         <div class="auth-tabs">
           <button type="button" class="auth-tab" :class="{ active: tab === 'login' }" @click="tab = 'login'">登录</button>
           <button type="button" class="auth-tab" :class="{ active: tab === 'register' }" @click="tab = 'register'">注册</button>
@@ -155,7 +155,7 @@ async function doRegister() {
 
         <div v-if="tab === 'login'">
           <h2>登录您的账户</h2>
-          <p class="sub">管理推荐记录与渠道分析 · 演示 13888888888 / demo123456</p>
+          <p class="sub">管理自选记录与渠道分析 · 演示 13888888888 / demo123456</p>
           <div class="field"><label>手机号</label><input v-model="phone" type="tel" maxlength="11"></div>
           <div class="field"><label>密码</label><input v-model="password" type="password"></div>
           <p v-if="error" class="error">{{ error }}</p>

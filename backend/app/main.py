@@ -53,7 +53,7 @@ def health():
         "status": "ok",
         "app": settings.app_name,
         "api_version": "2026-07-08",
-        "features": ["rec_remove", "rec_refetch", "auto_fetch", "invites"],
+        "features": ["rec_remove", "rec_refetch", "auto_fetch", "invites", "invitee_notes"],
     }
 
 

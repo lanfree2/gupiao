@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
@@ -40,7 +40,7 @@ onMounted(load)
     <div class="topbar">
       <div>
         <h2>全站股票</h2>
-        <p class="desc">按代码聚合的推荐统计</p>
+        <p class="desc">按代码聚合的自选统计</p>
       </div>
     </div>
 
@@ -57,7 +57,7 @@ onMounted(load)
             <tr>
               <th>代码</th>
               <th>名称</th>
-              <th class="num">推荐次数</th>
+              <th class="num">自选次数</th>
               <th class="num">用户数</th>
               <th v-for="(_, i) in rows[0]?.period_avgs ?? []" :key="i" class="num">周期{{ i + 1 }}</th>
             </tr>

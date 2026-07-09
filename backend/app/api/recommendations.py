@@ -26,19 +26,28 @@ from app.services.tracking import (
     reset_recommendation_nodes,
 )
 
-router = APIRouter(prefix="/recommendations", tags=["推荐"])
+router = APIRouter(prefix="/recommendations", tags=["自选"])
 
 
 def _resolve_recommend_price(db: DbSession, stock_code: str, recommend_date, price: float | None) -> float:
     if price is not None and price > 0:
         return price
     result = get_close_on_or_before(db, stock_code, recommend_date)
+    if result:
+        return result[0]
+    return 0.0
+
+
+def _try_fill_recommend_price(db: DbSession, rec: Recommendation) -> bool:
+    if rec.recommend_price and rec.recommend_price > 0:
+        return True
+    prefetch_close_prices(db, rec.stock_code, [rec.recommend_date])
+    result = get_close_on_or_before(db, rec.stock_code, rec.recommend_date, max_lookback=30)
     if not result:
-        raise HTTPException(
-            status_code=400,
-            detail=f"未填写价格且无法获取 {recommend_date} 的收盘价，请手动填写或更换日期",
-        )
-    return result[0]
+        return False
+    rec.recommend_price = result[0]
+    db.commit()
+    return True
 
 
 def _safe_fetch_nodes(db: DbSession, rec_id: int) -> dict:
@@ -61,7 +70,7 @@ def _fetch_result_out(raw: dict) -> FetchResultOut:
     if raw.get("error"):
         message = f"抓取失败：{raw['error']}"
     elif processed == 0:
-        message = "暂无到期节点。若推荐日期是今天，需等节点到期；补录历史请选较早日期"
+        message = "暂无到期节点。若自选日期是今天，需等节点到期；补录历史请选较早日期"
     elif failed:
         message = f"已抓取 {done} 个节点，{failed} 个失败（可能停牌或网络问题）"
     else:
@@ -181,7 +190,7 @@ def _delete_rec_by_id(db: DbSession, rec_id: int, user_id: int) -> MessageOut:
     if not rec:
         raise HTTPException(status_code=404, detail="记录不存在")
     _do_delete_recommendation(db, rec)
-    return MessageOut(message="推荐记录已删除")
+    return MessageOut(message="自选记录已删除")
 
 
 @router.post("/remove", response_model=MessageOut)
@@ -245,6 +254,8 @@ def create_recommendation(body: RecommendationIn, user: CurrentUser, db: DbSessi
     db.add(rec)
     db.flush()
     create_tracking_nodes(db, rec, periods)
+    if rec.recommend_price <= 0 and _try_fill_recommend_price(db, rec):
+        reset_recommendation_nodes(db, rec.id)
     fetch_raw = _safe_fetch_nodes(db, rec.id)
     rec = load_rec(db, rec.id)
     return RecommendationCreateOut(

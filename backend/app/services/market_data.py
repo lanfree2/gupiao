@@ -237,9 +237,7 @@ def _sh_code_name_map() -> dict[str, str]:
         import akshare as ak
 
         df = ak.stock_info_sh_name_code()
-    code_col = "证券代码" if "证券代码" in df.columns else df.columns[0]
-    name_col = "证券简称" if "证券简称" in df.columns else df.columns[1]
-    return {str(row[code_col]).zfill(6): str(row[name_col]) for _, row in df.iterrows()}
+    return _parse_code_name_df(df)
 
 
 @lru_cache(maxsize=1)
@@ -248,20 +246,66 @@ def _sz_code_name_map() -> dict[str, str]:
         import akshare as ak
 
         df = ak.stock_info_sz_name_code()
-    code_col = "A股代码" if "A股代码" in df.columns else df.columns[1]
-    name_col = "A股简称" if "A股简称" in df.columns else df.columns[2]
-    return {str(row[code_col]).zfill(6): str(row[name_col]) for _, row in df.iterrows()}
+    return _parse_code_name_df(df)
+
+
+@lru_cache(maxsize=1)
+def _all_a_code_name_map() -> dict[str, str]:
+    with _without_system_proxy():
+        import akshare as ak
+
+        df = ak.stock_info_a_code_name()
+    return _parse_code_name_df(df)
+
+
+def _norm_stock_code(value) -> str:
+    s = str(value).strip()
+    if s.endswith(".0"):
+        s = s[:-2]
+    if "." in s:
+        s = s.split(".")[0]
+    digits = "".join(ch for ch in s if ch.isdigit())
+    return digits.zfill(6)[-6:] if digits else s.zfill(6)
+
+
+def _parse_code_name_df(df) -> dict[str, str]:
+    if df is None or df.empty:
+        return {}
+    cols = list(df.columns)
+    code_col = next(
+        (c for c in cols if any(k in str(c) for k in ("代码", "code", "CODE"))),
+        cols[0],
+    )
+    name_col = next(
+        (c for c in cols if c != code_col and any(k in str(c) for k in ("简称", "名称", "name", "NAME"))),
+        cols[1] if len(cols) > 1 else cols[0],
+    )
+    out: dict[str, str] = {}
+    for _, row in df.iterrows():
+        code = _norm_stock_code(row[code_col])
+        name = str(row[name_col]).strip()
+        if len(code) == 6 and name and name != "nan":
+            out[code] = name
+    return out
 
 
 def lookup_stock_name(stock_code: str) -> str | None:
-    code = stock_code.strip().zfill(6)
+    code = _norm_stock_code(stock_code)
+    maps: list[dict[str, str]] = []
     try:
         if code.startswith(("5", "6", "9")):
-            name = _sh_code_name_map().get(code)
+            maps.append(_sh_code_name_map())
         else:
-            name = _sz_code_name_map().get(code)
-        if name:
-            return name
+            maps.append(_sz_code_name_map())
+        maps.append(_all_a_code_name_map())
+        if code.startswith(("5", "6", "9")):
+            maps.append(_sz_code_name_map())
+        else:
+            maps.append(_sh_code_name_map())
+        for m in maps:
+            name = m.get(code)
+            if name:
+                return name
     except Exception as exc:
         logger.warning("akshare 查名称失败 %s: %s", code, exc)
     fallback = {
@@ -272,6 +316,8 @@ def lookup_stock_name(stock_code: str) -> str | None:
         "300843": "胜蓝股份",
         "601138": "工业富联",
         "600159": "大龙地产",
+        "300059": "东方财富",
+        "688981": "中芯国际",
     }
     return fallback.get(code)
 

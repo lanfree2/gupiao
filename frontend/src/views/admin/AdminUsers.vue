@@ -18,6 +18,8 @@ const q = ref('')
 const users = ref<AdminUser[]>([])
 const loading = ref(false)
 const smsRequired = ref(false)
+const inviteViewUsers = ref(true)
+const inviteViewChannels = ref(true)
 const savingSettings = ref(false)
 
 const showBind = ref(false)
@@ -38,12 +40,18 @@ async function loadUsers() {
 async function loadSettings() {
   const s = await api.adminSettings()
   smsRequired.value = s.register_sms_required
+  inviteViewUsers.value = s.invite_view_users
+  inviteViewChannels.value = s.invite_view_channels
 }
 
 async function saveSettings() {
   savingSettings.value = true
   try {
-    await api.adminSaveSettings({ register_sms_required: smsRequired.value })
+    await api.adminSaveSettings({
+      register_sms_required: smsRequired.value,
+      invite_view_users: inviteViewUsers.value,
+      invite_view_channels: inviteViewChannels.value,
+    })
     toast('设置已保存')
   } catch (e) {
     toast(e instanceof Error ? e.message : '保存失败')
@@ -93,16 +101,24 @@ onMounted(async () => {
     <div class="topbar">
       <div>
         <h2>用户与邀请</h2>
-        <p class="desc">管理用户邀请关系与注册设置</p>
+        <p class="desc">管理用户邀请关系、可见性与注册设置</p>
       </div>
     </div>
 
-    <div class="card" style="max-width:520px">
-      <div class="card-head"><h3>注册设置</h3></div>
-      <div class="card-body">
+    <div class="card" style="max-width:640px">
+      <div class="card-head"><h3>平台设置</h3></div>
+      <div class="card-body settings-block">
         <label class="agree">
           <input v-model="smsRequired" type="checkbox">
           <span>注册时必须短信验证码（关闭则仅需手机号+密码）</span>
+        </label>
+        <label class="agree">
+          <input v-model="inviteViewUsers" type="checkbox">
+          <span>允许邀请人查看受邀用户列表</span>
+        </label>
+        <label class="agree">
+          <input v-model="inviteViewChannels" type="checkbox">
+          <span>允许邀请人查看受邀用户的渠道与自选记录</span>
         </label>
         <button type="button" class="btn btn-primary" :disabled="savingSettings" @click="saveSettings">
           {{ savingSettings ? '保存中…' : '保存设置' }}
@@ -172,4 +188,5 @@ onMounted(async () => {
 
 <style scoped>
 .modal-desc { color: var(--t2); font-size: 13px; margin: -12px 0 16px; line-height: 1.6; }
+.settings-block { display: flex; flex-direction: column; gap: 12px; }
 </style>

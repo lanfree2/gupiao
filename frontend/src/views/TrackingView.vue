@@ -3,14 +3,17 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import RecTable from '@/components/RecTable.vue'
-import type { ChannelStatsOut, RecommendationOut } from '@/types/api'
+import type { ChannelStatsOut, PeriodOut, RecommendationOut } from '@/types/api'
 
 const route = useRoute()
 const rows = ref<RecommendationOut[]>([])
 const channels = ref<ChannelStatsOut[]>([])
+const periods = ref<PeriodOut[]>([])
 const q = ref('')
 const channelId = ref('')
 const loading = ref(true)
+
+const periodLabels = computed(() => periods.value.map((p) => p.label))
 
 const filtered = computed(() => {
   let list = [...rows.value]
@@ -33,12 +36,14 @@ const filtered = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const [recs, chs] = await Promise.all([
+    const [recs, chs, ps] = await Promise.all([
       api.recommendations() as Promise<RecommendationOut[]>,
       api.channels() as Promise<ChannelStatsOut[]>,
+      api.periods() as Promise<PeriodOut[]>,
     ])
     rows.value = recs
     channels.value = chs
+    periods.value = ps
   } finally {
     loading.value = false
   }
@@ -68,9 +73,9 @@ watch(
     <div class="topbar">
       <div>
         <h2>我的追踪</h2>
-        <p class="desc">我录入的全部推荐记录</p>
+        <p class="desc">我录入的全部自选记录</p>
       </div>
-      <RouterLink to="/add" class="btn btn-primary">＋ 录入推荐</RouterLink>
+      <RouterLink to="/add" class="btn btn-primary">＋ 录入自选</RouterLink>
     </div>
 
     <div class="filters">
@@ -85,17 +90,18 @@ watch(
     <div v-if="loading" class="empty"><strong>加载中…</strong></div>
     <div v-else class="card only-table">
       <div class="card-head">
-        <h3>历史推荐记录</h3>
-        <RouterLink v-if="!filtered.length && rows.length" to="/add" class="btn btn-sm btn-primary">录入推荐</RouterLink>
+        <h3>历史自选记录</h3>
+        <RouterLink v-if="!filtered.length && rows.length" to="/add" class="btn btn-sm btn-primary">录入自选</RouterLink>
       </div>
       <RecTable
         :rows="filtered"
+        :periods="periodLabels"
         from="tracking"
         :empty-title="rows.length ? '未找到匹配记录' : '暂无历史记录'"
-        :empty-desc="rows.length ? '试试调整筛选条件' : '录入第一条推荐后开始追踪'"
+        :empty-desc="rows.length ? '试试调整筛选条件' : '录入第一条自选后开始追踪'"
         @deleted="onDeleted"
       />
     </div>
-    <p class="foot-note">点击查看详情 · 红涨绿跌</p>
+    <p class="foot-note">左右滑动查看全部周期 · 点击查看详情 · 红涨绿跌</p>
   </div>
 </template>

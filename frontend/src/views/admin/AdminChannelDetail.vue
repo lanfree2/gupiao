@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { api, chipClass, fmtPct } from '@/api/client'
@@ -41,7 +41,7 @@ onMounted(async () => {
       </div>
 
       <div class="stats">
-        <div class="stat"><span class="label">推荐数</span><div class="num">{{ detail.stats.record_count }}</div></div>
+        <div class="stat"><span class="label">自选数</span><div class="num">{{ detail.stats.record_count }}</div></div>
         <div class="stat"><span class="label">涉及股票</span><div class="num">{{ detail.stats.stock_count }}</div></div>
         <div class="stat s-up"><span class="label">胜率</span><div class="num">{{ detail.stats.win_rate != null ? `${Math.round(detail.stats.win_rate)}%` : '—' }}</div></div>
         <div class="stat s-green"><span class="label">均收益</span><div class="num green">{{ fmtPctVal(detail.stats.avg_return) }}</div></div>
@@ -78,15 +78,15 @@ onMounted(async () => {
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>全部推荐</h3></div>
+        <div class="card-head"><h3>全部自选</h3></div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>代码</th>
                 <th>名称</th>
-                <th>推荐日</th>
-                <th class="num">推荐价</th>
+                <th>自选日</th>
+                <th class="num">自选价</th>
                 <th v-for="n in detail.records[0]?.nodes ?? []" :key="n.label" class="num">{{ n.label }}</th>
               </tr>
             </thead>

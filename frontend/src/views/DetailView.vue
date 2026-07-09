@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { api, chipClass, fmtPct } from '@/api/client'
@@ -29,6 +29,29 @@ const backPath = computed(() => {
 })
 
 const isAdminView = computed(() => route.query.from === 'admin')
+
+const railTimeline = computed(() => {
+  if (!rec.value) return []
+  const open = {
+    key: 'open',
+    label: '开仓',
+    date: rec.value.recommend_date,
+    price: rec.value.recommend_price,
+    pct: null as number | null,
+    status: 'done' as const,
+    isOpen: true,
+  }
+  const nodes = rec.value.nodes.map((node) => ({
+    key: String(node.id),
+    label: node.label,
+    date: node.due_date,
+    price: node.close_price,
+    pct: node.pct_change,
+    status: node.status,
+    isOpen: false,
+  }))
+  return [open, ...nodes]
+})
 
 async function load() {
   loading.value = true
@@ -62,7 +85,7 @@ function cancelEdit() {
 async function saveEdit() {
   if (!rec.value) return
   if (!formDate.value) {
-    errorMsg.value = '请填写推荐日期'
+    errorMsg.value = '请填写自选日期'
     return
   }
   saving.value = true
@@ -86,14 +109,14 @@ async function saveEdit() {
 
 async function deleteRec() {
   if (!rec.value) return
-  if (!confirm(`确定删除「${rec.value.stock_name}」的推荐记录？删除后无法恢复。`)) return
+  if (!confirm(`确定删除「${rec.value.stock_name}」的自选记录？删除后无法恢复。`)) return
   deleting.value = true
   errorMsg.value = ''
   try {
     const res = isAdminView.value
       ? await api.adminDeleteRec(rec.value.id)
       : await api.deleteRec(rec.value.id)
-    toast(res.message || '推荐记录已删除')
+    toast(res.message || '自选记录已删除')
     router.push(backPath.value)
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : '删除失败'
@@ -134,12 +157,12 @@ onMounted(load)
         <div>
           <h3>{{ rec.stock_name }} <span class="code">{{ rec.stock_code }}</span></h3>
           <div class="detail-badge-row">
-            <span class="user-badge mine">我的推荐</span>
+            <span class="user-badge mine">我的自选</span>
             <span class="tag" :style="{ '--tag-c': tagColor(rec.channel_color) }">{{ rec.channel_name }}</span>
           </div>
         </div>
         <div class="title-actions">
-          <span v-if="!editing" class="meta">{{ rec.recommend_date }} · ¥{{ fmtPrice(rec.recommend_price) }}</span>
+          <span v-if="!editing" class="meta">开仓 {{ rec.recommend_date }} · ¥{{ fmtPrice(rec.recommend_price) }}</span>
           <div v-if="!editing" class="title-btns">
             <button type="button" class="btn btn-sm btn-ghost" @click="startEdit">编辑</button>
             <button
@@ -155,18 +178,18 @@ onMounted(load)
       </div>
 
       <div v-if="editing" class="card edit-card">
-        <div class="card-head"><h3>编辑推荐信息</h3></div>
+        <div class="card-head"><h3>编辑自选信息</h3></div>
         <div class="card-body edit-form">
           <div class="form-group">
-            <label>推荐日期</label>
+            <label>开仓日期</label>
             <input v-model="formDate" type="date" class="form-control">
           </div>
           <div class="form-group">
-            <label>推荐价格（元）</label>
+            <label>开仓价格（元）</label>
             <input v-model="formPrice" type="number" step="0.01" min="0.01" class="form-control" placeholder="留空则保持原价">
           </div>
           <div class="form-group">
-            <label>推荐理由</label>
+            <label>自选理由</label>
             <textarea v-model="formReason" class="form-control" rows="3" />
           </div>
           <p class="edit-hint">修改日期或价格后，追踪节点将自动重建并重新抓取。</p>
@@ -179,22 +202,52 @@ onMounted(load)
       </div>
 
       <div class="card rail-card">
+        <div class="card-head"><h3>开仓与追踪时间线</h3></div>
         <div class="rail">
           <div
-            v-for="node in rec.nodes"
-            :key="node.id"
+            v-for="item in railTimeline"
+            :key="item.key"
             class="rail-node"
-            :class="{ done: node.status === 'done' }"
+            :class="{ done: item.status === 'done', open: item.isOpen }"
           >
             <div class="rail-dot" />
-            <div class="rl">{{ node.label }}</div>
-            <div class="rd">{{ fmtDateShort(node.due_date) }}</div>
+            <div class="rl">{{ item.label }}</div>
+            <div class="rd">{{ fmtDateShort(item.date) }}</div>
+            <div v-if="item.isOpen" class="rv open-price">¥{{ fmtPrice(item.price ?? 0) }}</div>
             <div
-              v-if="node.status === 'done' && node.pct_change != null"
+              v-else-if="item.status === 'done' && item.pct != null"
               class="rv"
-              :class="chipClass(node.pct_change)"
-            >{{ fmtPct(node.pct_change) }}</div>
-            <div v-else class="rv pend">{{ node.status === 'pending' ? '待到期' : '—' }}</div>
+              :class="chipClass(item.pct)"
+            >{{ fmtPct(item.pct) }}</div>
+            <div v-else-if="item.price != null" class="rv open-price">¥{{ fmtPrice(item.price) }}</div>
+            <div v-else class="rv pend">{{ item.status === 'pending' ? '待到期' : '—' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>时间线明细</h3></div>
+        <div class="v-timeline">
+          <div v-for="item in railTimeline" :key="`v-${item.key}`" class="v-tl-item" :class="{ open: item.isOpen }">
+            <div class="v-tl-dot" />
+            <div class="v-tl-body">
+              <div class="v-tl-title">
+                <strong>{{ item.label }}</strong>
+                <span class="mono">{{ fmtDateShort(item.date) }}</span>
+              </div>
+              <div class="v-tl-meta">
+                <span v-if="item.isOpen">开仓价 ¥{{ fmtPrice(item.price ?? 0) }}</span>
+                <template v-else>
+                  <span v-if="item.price != null">收盘 ¥{{ fmtPrice(item.price) }}</span>
+                  <span
+                    v-if="item.pct != null"
+                    class="chip"
+                    :class="chipClass(item.pct)"
+                  >{{ fmtPct(item.pct) }}</span>
+                  <span v-else-if="item.status === 'pending'" class="dim">待到期</span>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -214,6 +267,14 @@ onMounted(load)
               </tr>
             </thead>
             <tbody>
+              <tr class="open-row">
+                <td>开仓</td>
+                <td class="mono">0天</td>
+                <td class="td-date">{{ rec.recommend_date }}</td>
+                <td>已开仓</td>
+                <td class="price-cell">{{ fmtPrice(rec.recommend_price) }}</td>
+                <td class="num-cell"><span class="chip flat">基准</span></td>
+              </tr>
               <tr v-for="node in rec.nodes" :key="node.id">
                 <td>{{ node.label }}</td>
                 <td class="mono">{{ node.days }}天</td>
@@ -235,7 +296,7 @@ onMounted(load)
       </div>
 
       <div v-if="rec.reason && !editing" class="card">
-        <div class="card-head"><h3>推荐理由</h3></div>
+        <div class="card-head"><h3>自选理由</h3></div>
         <div class="card-body"><p>{{ rec.reason }}</p></div>
       </div>
 
@@ -245,7 +306,7 @@ onMounted(load)
       <div class="detail-foot">
         <RouterLink :to="backPath" class="btn btn-ghost">← 返回列表</RouterLink>
         <button v-if="!editing" type="button" class="btn btn-danger" :disabled="deleting" @click="deleteRec">
-          删除此推荐
+          删除此自选
         </button>
       </div>
     </template>
@@ -297,4 +358,52 @@ onMounted(load)
   font-size: 13px;
   margin: 0;
 }
+.rail-node.open .rail-dot {
+  background: var(--warn);
+  border-color: var(--warn);
+}
+.rv.open-price {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.v-timeline {
+  padding: 8px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.v-tl-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.v-tl-item:last-child { border-bottom: 0; }
+.v-tl-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.v-tl-item.open .v-tl-dot { background: var(--warn); }
+.v-tl-body { flex: 1; min-width: 0; }
+.v-tl-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+.v-tl-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--t2);
+}
+.open-row { background: rgba(var(--up-rgb), 0.04); }
 </style>

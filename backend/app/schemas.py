@@ -90,6 +90,16 @@ class InviteeOut(BaseModel):
     record_count: int
     channel_count: int
     created_at: datetime
+    note: str = ""
+
+
+class InviteeNoteIn(BaseModel):
+    note: str = ""
+
+
+class InviteConfigOut(BaseModel):
+    view_users: bool
+    view_channels: bool
 
 
 class InviteInfoOut(BaseModel):
@@ -111,10 +121,14 @@ class AdminUserOut(BaseModel):
 
 class AdminSettingsOut(BaseModel):
     register_sms_required: bool
+    invite_view_users: bool = True
+    invite_view_channels: bool = True
 
 
 class AdminSettingsIn(BaseModel):
     register_sms_required: bool
+    invite_view_users: bool = True
+    invite_view_channels: bool = True
 
 
 class BindInviterIn(BaseModel):
@@ -217,6 +231,8 @@ class DashboardOut(BaseModel):
     pending_nodes: int
     channel_win_rates: list[dict]
     channel_avg_returns: list[dict]
+    period_stats: list[dict] = []
+    channel_period_stats: list[dict] = []
     recent: list[RecommendationOut]
 
 

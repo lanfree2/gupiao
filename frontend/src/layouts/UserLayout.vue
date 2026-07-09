@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -27,7 +27,7 @@ function logout() {
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-title">嘉岭佰</div>
-        <small>推荐来源 · 走势验证</small>
+        <small>自选来源 · 走势验证</small>
       </div>
       <nav class="nav">
         <div class="nav-section">主菜单</div>
@@ -41,7 +41,7 @@ function logout() {
         </RouterLink>
         <RouterLink to="/add" class="nav-link" :class="{ active: navActive('/add') }">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
-          录入推荐
+          录入自选
         </RouterLink>
         <RouterLink to="/channels" class="nav-link" :class="{ active: navActive('/channels') }">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
@@ -75,7 +75,7 @@ function logout() {
 
     <main class="main">
       <div class="mobile-top">
-        <div class="bt">嘉岭佰<small>推荐来源 · 走势验证</small></div>
+        <div class="bt">嘉岭佰<small>自选来源 · 走势验证</small></div>
         <div class="mobile-top-actions">
           <button type="button" class="mini-theme" @click="toggle">{{ label === '深色' ? '🌙' : '☀' }}</button>
           <button type="button" class="mini-logout" @click="logout">退出</button>

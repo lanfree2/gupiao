@@ -5,7 +5,7 @@ import RecTable from '@/components/RecTable.vue'
 import { tagColor } from '@/utils/colors'
 import { fmtPctVal } from '@/utils/format'
 import { toast } from '@/utils/toast'
-import type { ChannelStatsOut, RecommendationOut } from '@/types/api'
+import type { ChannelStatsOut, PeriodOut, RecommendationOut } from '@/types/api'
 
 interface InviteeRow {
   id: number
@@ -14,6 +14,7 @@ interface InviteeRow {
   record_count: number
   channel_count: number
   created_at: string
+  note: string
 }
 
 const inviteCode = ref('')
@@ -21,28 +22,41 @@ const invitePath = ref('')
 const inviteeCount = ref(0)
 const invitees = ref<InviteeRow[]>([])
 const loading = ref(true)
+const config = ref({ view_users: true, view_channels: true })
+
 const selectedId = ref<number | null>(null)
+const selectedChannelId = ref<number | null>(null)
+const noteDraft = ref('')
+const savingNote = ref(false)
+
 const channels = ref<ChannelStatsOut[]>([])
 const records = ref<RecommendationOut[]>([])
 const detailLoading = ref(false)
 
 const inviteUrl = computed(() => {
   if (!invitePath.value) return ''
-  const base = window.location.origin
-  return `${base}${invitePath.value}`
+  return `${window.location.origin}${invitePath.value}`
 })
+
+const selectedInvitee = computed(() => invitees.value.find((x) => x.id === selectedId.value))
+const selectedChannel = computed(() => channels.value.find((x) => x.id === selectedChannelId.value))
 
 async function load() {
   loading.value = true
   try {
-    const [me, list] = await Promise.all([
-      api.inviteMe(),
-      api.invitees() as Promise<InviteeRow[]>,
-    ])
+    const cfg = await api.inviteConfig()
+    config.value = cfg
+    const me = await api.inviteMe()
     inviteCode.value = me.invite_code
     invitePath.value = me.invite_path
     inviteeCount.value = me.invitee_count
-    invitees.value = list
+    if (cfg.view_users) {
+      invitees.value = await api.invitees() as InviteeRow[]
+    } else {
+      invitees.value = []
+    }
+  } catch (e) {
+    toast(e instanceof Error ? e.message : '加载失败')
   } finally {
     loading.value = false
   }
@@ -60,14 +74,16 @@ async function copyLink() {
 
 async function selectInvitee(row: InviteeRow) {
   selectedId.value = row.id
+  selectedChannelId.value = null
+  noteDraft.value = row.note || ''
+  records.value = []
+  if (!config.value.view_channels) {
+    channels.value = []
+    return
+  }
   detailLoading.value = true
   try {
-    const [chs, recs] = await Promise.all([
-      api.inviteeChannels(row.id) as Promise<ChannelStatsOut[]>,
-      api.inviteeRecommendations(row.id) as Promise<RecommendationOut[]>,
-    ])
-    channels.value = chs
-    records.value = recs
+    channels.value = await api.inviteeChannels(row.id) as ChannelStatsOut[]
   } catch (e) {
     toast(e instanceof Error ? e.message : '加载失败')
     selectedId.value = null
@@ -76,7 +92,34 @@ async function selectInvitee(row: InviteeRow) {
   }
 }
 
-const selectedInvitee = computed(() => invitees.value.find((x) => x.id === selectedId.value))
+async function selectChannel(ch: ChannelStatsOut) {
+  if (!selectedId.value) return
+  selectedChannelId.value = ch.id
+  detailLoading.value = true
+  try {
+    records.value = await api.inviteeChannelRecs(selectedId.value, ch.id) as RecommendationOut[]
+  } catch (e) {
+    toast(e instanceof Error ? e.message : '加载失败')
+    selectedChannelId.value = null
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+async function saveNote() {
+  if (!selectedId.value) return
+  savingNote.value = true
+  try {
+    const res = await api.saveInviteeNote(selectedId.value, noteDraft.value)
+    toast(res.message)
+    const row = invitees.value.find((x) => x.id === selectedId.value)
+    if (row) row.note = noteDraft.value
+  } catch (e) {
+    toast(e instanceof Error ? e.message : '保存失败')
+  } finally {
+    savingNote.value = false
+  }
+}
 
 onMounted(load)
 </script>
@@ -86,7 +129,7 @@ onMounted(load)
     <div class="topbar">
       <div>
         <h2>我的邀请</h2>
-        <p class="desc">分享邀请链接，查看受邀用户的渠道与推荐数据</p>
+        <p class="desc">分享邀请链接，管理受邀用户备注与渠道数据</p>
       </div>
     </div>
 
@@ -102,7 +145,11 @@ onMounted(load)
         </div>
       </div>
 
-      <div class="grid-2">
+      <div v-if="!config.view_users" class="card">
+        <div class="card-body"><p class="dim">管理员已关闭查看受邀用户，您仍可分享邀请链接。</p></div>
+      </div>
+
+      <div v-else class="grid-2 invite-grid">
         <div class="card only-table">
           <div class="card-head"><h3>受邀用户（{{ invitees.length }}）</h3></div>
           <div class="table-wrap">
@@ -111,8 +158,8 @@ onMounted(load)
                 <tr>
                   <th>昵称</th>
                   <th>手机</th>
+                  <th>备注</th>
                   <th class="num">渠道</th>
-                  <th class="num">推荐</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,8 +172,8 @@ onMounted(load)
                 >
                   <td>{{ row.nickname }}</td>
                   <td class="mono">{{ row.phone_masked }}</td>
+                  <td class="note-cell">{{ row.note || '—' }}</td>
                   <td class="num-cell">{{ row.channel_count }}</td>
-                  <td class="num-cell">{{ row.record_count }}</td>
                 </tr>
                 <tr v-if="!invitees.length">
                   <td colspan="4"><div class="empty"><strong>暂无受邀用户</strong><span>分享上方链接邀请好友注册</span></div></td>
@@ -136,27 +183,56 @@ onMounted(load)
           </div>
         </div>
 
-        <div class="card">
+        <div class="card invite-detail">
           <div class="card-head">
-            <h3>{{ selectedInvitee ? `${selectedInvitee.nickname} 的数据` : '选择用户查看' }}</h3>
+            <h3>{{ selectedInvitee ? selectedInvitee.nickname : '选择用户查看' }}</h3>
           </div>
-          <div v-if="!selectedId" class="card-body"><p class="dim">点击左侧用户查看其渠道与推荐</p></div>
-          <div v-else-if="detailLoading" class="empty"><strong>加载中…</strong></div>
+          <div v-if="!selectedId" class="card-body"><p class="dim">点击左侧用户，设置备注并查看其渠道</p></div>
           <template v-else>
-            <div class="card-body">
-              <h4 class="sub-title">渠道（{{ channels.length }}）</h4>
-              <div v-if="channels.length" class="channel-mini-list">
-                <div v-for="ch in channels" :key="ch.id" class="channel-mini">
-                  <span class="tag" :style="{ '--tag-c': tagColor(ch.color) }">{{ ch.name }}</span>
-                  <span class="dim">{{ ch.record_count }} 条 · 胜率 {{ ch.win_rate != null ? `${Math.round(ch.win_rate)}%` : '—' }} · 均收益 {{ fmtPctVal(ch.avg_return) }}</span>
+            <div class="card-body note-block">
+              <label class="sub-title">用户备注</label>
+              <textarea v-model="noteDraft" class="form-control" rows="2" placeholder="给该用户写备注，方便识别" />
+              <button type="button" class="btn btn-sm btn-primary" :disabled="savingNote" @click="saveNote">
+                {{ savingNote ? '保存中…' : '保存备注' }}
+              </button>
+            </div>
+
+            <div v-if="!config.view_channels" class="card-body">
+              <p class="dim">管理员已关闭查看受邀用户的渠道与自选记录</p>
+            </div>
+            <template v-else>
+              <div v-if="detailLoading && !selectedChannelId" class="empty"><strong>加载中…</strong></div>
+              <div v-else class="card-body">
+                <h4 class="sub-title">渠道（{{ channels.length }}）</h4>
+                <div v-if="channels.length" class="channel-mini-list">
+                  <button
+                    v-for="ch in channels"
+                    :key="ch.id"
+                    type="button"
+                    class="channel-mini"
+                    :class="{ active: selectedChannelId === ch.id }"
+                    @click="selectChannel(ch)"
+                  >
+                    <span class="tag" :style="{ '--tag-c': tagColor(ch.color) }">{{ ch.name }}</span>
+                    <span class="dim">{{ ch.record_count }} 条 · 胜率 {{ ch.win_rate != null ? `${Math.round(ch.win_rate)}%` : '—' }} · 均收益 {{ fmtPctVal(ch.avg_return) }}</span>
+                  </button>
                 </div>
+                <p v-else class="dim">该用户暂无渠道</p>
               </div>
-              <p v-else class="dim">暂无渠道</p>
-            </div>
-            <div class="card only-table" style="margin:0;border:0;box-shadow:none">
-              <div class="card-head" style="border-top:1px solid var(--border)"><h3>推荐记录（{{ records.length }}）</h3></div>
-              <RecTable :rows="records" :show-delete="false" :show-action="false" from="invite" empty-title="暂无推荐" />
-            </div>
+
+              <div v-if="selectedChannel" class="card only-table channel-records">
+                <div class="card-head">
+                  <h3>{{ selectedChannel.name }} · 自选记录（{{ records.length }}）</h3>
+                </div>
+                <RecTable
+                  :rows="records"
+                  :show-delete="false"
+                  :show-action="false"
+                  from="invite"
+                  empty-title="该渠道暂无自选"
+                />
+              </div>
+            </template>
           </template>
         </div>
       </div>
@@ -168,8 +244,13 @@ onMounted(load)
 .invite-box { display: flex; flex-direction: column; gap: 12px; }
 .invite-code { font-size: 14px; }
 .invite-link { word-break: break-all; font-size: 13px; color: var(--t2); padding: 10px 12px; background: var(--surface-2); border-radius: var(--r-sm); border: 1px solid var(--border); }
+.invite-grid { align-items: stretch; }
 tr.active { background: var(--accent-dim); }
-.sub-title { margin: 0 0 10px; font-size: 14px; }
-.channel-mini-list { display: flex; flex-direction: column; gap: 10px; }
-.channel-mini { display: flex; flex-direction: column; gap: 4px; }
+.note-cell { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.sub-title { margin: 0 0 10px; font-size: 14px; font-weight: 600; display: block; }
+.note-block { display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--border); }
+.channel-mini-list { display: flex; flex-direction: column; gap: 8px; }
+.channel-mini { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; width: 100%; }
+.channel-mini:hover, .channel-mini.active { background: var(--accent-dim); border-color: var(--accent); }
+.channel-records { margin: 0; border-top: 1px solid var(--border); box-shadow: none; }
 </style>

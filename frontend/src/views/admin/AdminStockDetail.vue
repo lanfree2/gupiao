@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { api, chipClass, fmtPct } from '@/api/client'
@@ -42,7 +42,7 @@ onMounted(async () => {
         <div>
           <h3>{{ detail.stock_name }} <span class="code">{{ detail.stock_code }}</span></h3>
         </div>
-        <span class="meta">被推荐 {{ detail.count }} 次 · {{ detail.user_count }} 位用户</span>
+        <span class="meta">被自选 {{ detail.count }} 次 · {{ detail.user_count }} 位用户</span>
       </div>
 
       <div class="stats">
@@ -83,15 +83,15 @@ onMounted(async () => {
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>全部推荐记录</h3></div>
+        <div class="card-head"><h3>全部自选记录</h3></div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>用户</th>
                 <th>渠道</th>
-                <th>推荐日</th>
-                <th class="num">推荐价</th>
+                <th>自选日</th>
+                <th class="num">自选价</th>
                 <th v-for="n in detail.records[0]?.nodes ?? []" :key="n.label" class="num">{{ n.label }}</th>
               </tr>
             </thead>

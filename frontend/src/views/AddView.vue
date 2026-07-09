@@ -72,14 +72,14 @@ watch([stockCode, recommendDate], () => {
   priceTimer.value = setTimeout(async () => {
     try {
       const res = await api.stockClose(code, recommendDate.value) as { close: number; trade_date: string }
-      if (!recommendPrice.value) recommendPrice.value = String(res.close)
-      priceHint.value = `推荐日(${res.trade_date})收盘价 ¥${res.close}，留空将自动使用`
+      recommendPrice.value = String(res.close)
+      priceHint.value = `自选日(${res.trade_date})收盘价 ¥${res.close}，已自动填入开仓价`
     } catch (e) {
       const msg = e instanceof Error ? e.message : ''
       if (msg.includes('代理') || msg.includes('行情源') || msg.includes('503')) {
-        priceHint.value = '行情接口暂时不可用（网络/代理问题），请手动填写价格'
+        priceHint.value = '行情接口暂时不可用，可留空保存，系统将稍后自动获取收盘价'
       } else {
-        priceHint.value = '该日期暂无收盘价数据，请选手动填写或更换日期'
+        priceHint.value = '该日期暂无收盘价，可留空保存，保存后将自动尝试获取'
       }
     }
   }, 500)
@@ -135,8 +135,8 @@ onMounted(loadMeta)
   <div class="page">
     <div class="topbar">
       <div>
-        <h2>录入推荐</h2>
-        <p class="desc">添加新的股票推荐并开始自动追踪</p>
+        <h2>录入自选</h2>
+        <p class="desc">添加新的股票自选并开始自动追踪</p>
       </div>
     </div>
 
@@ -153,7 +153,7 @@ onMounted(loadMeta)
             <input v-model="stockName" class="form-control" readonly style="opacity:.6">
           </div>
           <div class="form-group">
-            <label>推荐渠道</label>
+            <label>自选渠道</label>
             <select v-model="channelSel" class="form-control">
               <option v-for="ch in channels" :key="ch.id" :value="String(ch.id)">{{ ch.name }}</option>
               <option :value="NEW">＋ 新建渠道</option>
@@ -165,17 +165,17 @@ onMounted(loadMeta)
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>推荐日期</label>
+              <label>开仓日期</label>
               <input v-model="recommendDate" class="form-control mono" type="date">
             </div>
             <div class="form-group">
-              <label>推荐价格（元）</label>
-              <input v-model="recommendPrice" class="form-control mono" inputmode="decimal" placeholder="留空则自动取推荐日收盘价">
+              <label>开仓价格（元）</label>
+              <input v-model="recommendPrice" class="form-control mono" inputmode="decimal" placeholder="选择日期后自动填入收盘价">
               <p v-if="priceHint" class="form-hint">{{ priceHint }}</p>
             </div>
           </div>
           <div class="form-group">
-            <label>推荐理由</label>
+            <label>自选理由</label>
             <textarea v-model="reason" class="form-control" />
           </div>
         </div>
@@ -189,7 +189,7 @@ onMounted(loadMeta)
           </div>
           <div class="card-body">
             <p style="color:var(--t2);font-size:13.5px;margin-bottom:14px;line-height:1.7">
-              保存后系统将在各节点到期日自动抓取收盘价。若推荐日期较早，已到期节点会<strong>立即抓取历史行情</strong>。
+              保存后系统将在各节点到期日自动抓取收盘价。若自选日期较早，已到期节点会<strong>立即抓取历史行情</strong>。
             </p>
             <div class="node-tags">
               <span v-for="p in periods" :key="p.id" class="node-tag">{{ p.label }}（{{ p.days }}天）</span>

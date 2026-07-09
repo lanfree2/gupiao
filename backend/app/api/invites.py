@@ -1,9 +1,25 @@
 from fastapi import APIRouter, HTTPException
+from sqlalchemy.orm import joinedload
 
 from app.deps import CurrentUser, DbSession
-from app.models import Channel, Recommendation
-from app.schemas import ChannelStatsOut, InviteeOut, InviteInfoOut, RecommendationOut
-from app.services.invites import assert_can_view_invitee, ensure_invite_code, list_invitees
+from app.models import Channel, InviteeNote, Recommendation
+from app.schemas import (
+    ChannelStatsOut,
+    InviteConfigOut,
+    InviteInfoOut,
+    InviteeNoteIn,
+    InviteeOut,
+    MessageOut,
+    RecommendationOut,
+)
+from app.services.app_settings import invite_view_channels, invite_view_users
+from app.services.invites import (
+    assert_can_view_invitee,
+    ensure_invite_code,
+    get_invitee_note,
+    list_invitees,
+    set_invitee_note,
+)
 from app.services.stats import all_node_values, rec_to_out, stats_from_values
 
 router = APIRouter(prefix="/invites", tags=["邀请"])
@@ -27,10 +43,18 @@ def _channel_stats(db, user_id: int, ch: Channel) -> ChannelStatsOut:
     )
 
 
+@router.get("/config", response_model=InviteConfigOut)
+def invite_config(user: CurrentUser, db: DbSession):
+    return InviteConfigOut(
+        view_users=invite_view_users(db),
+        view_channels=invite_view_channels(db),
+    )
+
+
 @router.get("/me", response_model=InviteInfoOut)
 def my_invite(user: CurrentUser, db: DbSession):
     code = ensure_invite_code(db, user)
-    invitees = list_invitees(db, user.id)
+    invitees = list_invitees(db, user.id) if invite_view_users(db) else []
     return InviteInfoOut(
         invite_code=code,
         invite_path=f"/login?tab=register&invite={code}",
@@ -40,11 +64,27 @@ def my_invite(user: CurrentUser, db: DbSession):
 
 @router.get("/invitees", response_model=list[InviteeOut])
 def my_invitees(user: CurrentUser, db: DbSession):
+    if not invite_view_users(db):
+        raise HTTPException(status_code=403, detail="管理员已关闭查看受邀用户")
     return [InviteeOut(**x) for x in list_invitees(db, user.id)]
+
+
+@router.put("/invitees/{invitee_id}/note", response_model=MessageOut)
+def save_invitee_note(invitee_id: int, body: InviteeNoteIn, user: CurrentUser, db: DbSession):
+    if not invite_view_users(db):
+        raise HTTPException(status_code=403, detail="管理员已关闭查看受邀用户")
+    try:
+        assert_can_view_invitee(db, user.id, invitee_id)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    set_invitee_note(db, user.id, invitee_id, body.note)
+    return MessageOut(message="备注已保存")
 
 
 @router.get("/invitees/{invitee_id}/channels", response_model=list[ChannelStatsOut])
 def invitee_channels(invitee_id: int, user: CurrentUser, db: DbSession):
+    if not invite_view_channels(db):
+        raise HTTPException(status_code=403, detail="管理员已关闭查看受邀用户渠道")
     try:
         invitee = assert_can_view_invitee(db, user.id, invitee_id)
     except PermissionError as exc:
@@ -53,14 +93,35 @@ def invitee_channels(invitee_id: int, user: CurrentUser, db: DbSession):
     return [_channel_stats(db, invitee.id, c) for c in channels]
 
 
-@router.get("/invitees/{invitee_id}/recommendations", response_model=list[RecommendationOut])
-def invitee_recommendations(invitee_id: int, user: CurrentUser, db: DbSession):
+@router.get("/invitees/{invitee_id}/channels/{channel_id}/recommendations", response_model=list[RecommendationOut])
+def invitee_channel_recommendations(invitee_id: int, channel_id: int, user: CurrentUser, db: DbSession):
+    if not invite_view_channels(db):
+        raise HTTPException(status_code=403, detail="管理员已关闭查看受邀用户渠道")
     try:
         invitee = assert_can_view_invitee(db, user.id, invitee_id)
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
-    from sqlalchemy.orm import joinedload
+    ch = db.query(Channel).filter(Channel.id == channel_id, Channel.user_id == invitee.id).first()
+    if not ch:
+        raise HTTPException(status_code=404, detail="渠道不存在")
+    recs = (
+        db.query(Recommendation)
+        .options(joinedload(Recommendation.nodes), joinedload(Recommendation.channel))
+        .filter(Recommendation.user_id == invitee.id, Recommendation.channel_id == channel_id)
+        .order_by(Recommendation.recommend_date.desc())
+        .all()
+    )
+    return [RecommendationOut(**rec_to_out(r)) for r in recs]
 
+
+@router.get("/invitees/{invitee_id}/recommendations", response_model=list[RecommendationOut])
+def invitee_recommendations(invitee_id: int, user: CurrentUser, db: DbSession):
+    if not invite_view_channels(db):
+        raise HTTPException(status_code=403, detail="管理员已关闭查看受邀用户渠道")
+    try:
+        invitee = assert_can_view_invitee(db, user.id, invitee_id)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     recs = (
         db.query(Recommendation)
         .options(joinedload(Recommendation.nodes), joinedload(Recommendation.channel))

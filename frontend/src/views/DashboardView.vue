@@ -5,15 +5,23 @@ import { api } from '@/api/client'
 import RecTable from '@/components/RecTable.vue'
 import { tagColor } from '@/utils/colors'
 import { fmtPctVal } from '@/utils/format'
-import type { DashboardOut } from '@/types/api'
+import type { DashboardOut, PeriodOut } from '@/types/api'
 
 const data = ref<DashboardOut | null>(null)
+const periods = ref<PeriodOut[]>([])
 const loading = ref(true)
+
+const periodLabels = computed(() => periods.value.map((p) => p.label))
 
 async function load() {
   loading.value = true
   try {
-    data.value = await api.dashboard() as DashboardOut
+    const [dash, ps] = await Promise.all([
+      api.dashboard() as Promise<DashboardOut>,
+      api.periods() as Promise<PeriodOut[]>,
+    ])
+    data.value = dash
+    periods.value = ps
   } finally {
     loading.value = false
   }
@@ -27,23 +35,6 @@ function onDeleted(id: number) {
   load()
 }
 
-const recentPeriods = computed(() => {
-  const first = data.value?.recent[0]
-  if (!first?.nodes.length) return []
-  const nodes = first.nodes
-  const pick = [0, Math.min(2, nodes.length - 1), nodes.length - 1].filter((v, i, a) => a.indexOf(v) === i)
-  return pick.map((i) => nodes[i].label)
-})
-
-const recentRows = computed(() => {
-  if (!data.value) return []
-  return data.value.recent.map((r) => {
-    const nodes = r.nodes
-    const pick = [0, Math.min(2, nodes.length - 1), nodes.length - 1].filter((v, i, a) => a.indexOf(v) === i)
-    return { ...r, nodes: pick.map((i) => nodes[i]) }
-  })
-})
-
 onMounted(load)
 </script>
 
@@ -52,9 +43,9 @@ onMounted(load)
     <div class="topbar">
       <div>
         <h2>我的总览</h2>
-        <p class="desc">我录入的推荐与渠道表现</p>
+        <p class="desc">按渠道查看各周期表现</p>
       </div>
-      <RouterLink to="/add" class="btn btn-primary">＋ 录入推荐</RouterLink>
+      <RouterLink to="/add" class="btn btn-primary">＋ 录入自选</RouterLink>
     </div>
 
     <div v-if="loading" class="empty"><strong>加载中…</strong></div>
@@ -63,7 +54,7 @@ onMounted(load)
         <div class="stat">
           <span class="label">我的追踪</span>
           <div class="num">{{ data.tracking_count }}</div>
-          <div class="foot">当前追踪中的推荐数</div>
+          <div class="foot">当前追踪中的自选数</div>
         </div>
         <div class="stat">
           <span class="label">综合胜率</span>
@@ -82,42 +73,33 @@ onMounted(load)
         </div>
       </div>
 
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-head"><h3>渠道胜率对比</h3></div>
+      <div v-if="data.channel_period_stats.length" class="channel-period-grid">
+        <div v-for="ch in data.channel_period_stats" :key="ch.name" class="card channel-period-card">
+          <div class="card-head">
+            <div class="ch-head-left">
+              <span class="tag" :style="{ '--tag-c': tagColor(ch.color) }">{{ ch.name }}</span>
+              <span class="dim ch-meta">{{ ch.record_count }} 条 · 胜率 {{ ch.win_rate != null ? `${Math.round(ch.win_rate)}%` : '—' }} · 均收益 {{ fmtPctVal(ch.avg_return) }}</span>
+            </div>
+          </div>
           <div class="card-body">
-            <template v-if="data.channel_win_rates.length">
-              <div v-for="ch in data.channel_win_rates" :key="ch.name" class="bar-row">
-                <span>{{ ch.name }}</span>
-                <div class="bar">
-                  <i v-if="ch.win_rate != null" :style="{ width: `${ch.win_rate}%`, background: tagColor(ch.color) }" />
-                </div>
-                <span class="pctv">{{ ch.win_rate != null ? `${Math.round(ch.win_rate)}%` : '—' }}</span>
+            <div v-for="p in ch.periods" :key="p.label" class="bar-row">
+              <span>{{ p.label }}</span>
+              <div class="bar">
+                <i
+                  v-if="p.avg_return != null"
+                  :style="{ width: `${Math.min(Math.abs(p.avg_return) * 10, 100)}%`, background: tagColor(ch.color) }"
+                />
               </div>
-            </template>
-            <p v-else class="dim">暂无数据</p>
+              <span class="pctv" :style="p.avg_return != null ? { color: p.avg_return >= 0 ? 'var(--up)' : 'var(--down)' } : {}">
+                {{ fmtPctVal(p.avg_return) }}
+              </span>
+            </div>
+            <p class="dim period-foot">{{ ch.periods.map((p) => `${p.label} ${p.sample}样本`).join(' · ') }}</p>
           </div>
         </div>
-        <div class="card">
-          <div class="card-head"><h3>渠道平均收益对比</h3></div>
-          <div class="card-body">
-            <template v-if="data.channel_avg_returns.length">
-              <div v-for="ch in data.channel_avg_returns" :key="ch.name" class="bar-row">
-                <span>{{ ch.name }}</span>
-                <div class="bar">
-                  <i
-                    v-if="ch.avg_return != null"
-                    :style="{ width: `${Math.min(Math.abs(ch.avg_return) * 10, 100)}%`, background: tagColor(ch.color) }"
-                  />
-                </div>
-                <span class="pctv" :style="ch.avg_return != null ? { color: ch.avg_return >= 0 ? 'var(--up)' : 'var(--down)' } : {}">
-                  {{ fmtPctVal(ch.avg_return) }}
-                </span>
-              </div>
-            </template>
-            <p v-else class="dim">暂无数据</p>
-          </div>
-        </div>
+      </div>
+      <div v-else class="card">
+        <div class="card-body"><p class="dim">暂无渠道数据，先录入自选并创建渠道</p></div>
       </div>
 
       <div class="card only-table">
@@ -125,8 +107,33 @@ onMounted(load)
           <h3>最近录入</h3>
           <RouterLink to="/tracking">全部 →</RouterLink>
         </div>
-        <RecTable :rows="recentRows" :periods="recentPeriods" from="tracking" empty-title="暂无记录" empty-desc="录入第一条推荐" @deleted="onDeleted" />
+        <RecTable
+          :rows="data.recent"
+          :periods="periodLabels"
+          from="tracking"
+          empty-title="暂无记录"
+          empty-desc="录入第一条自选"
+          @deleted="onDeleted"
+        />
       </div>
     </template>
   </div>
 </template>
+
+<style scoped>
+.channel-period-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 22px;
+  margin-bottom: 22px;
+}
+.channel-period-card { margin-bottom: 0; }
+.ch-head-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+.ch-meta { font-size: 12px; }
+.period-foot { margin-top: 12px; font-size: 12px; }
+</style>

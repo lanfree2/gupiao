@@ -41,7 +41,7 @@ function exitAdmin() {
         </RouterLink>
         <RouterLink to="/admin/records" class="nav-link" :class="{ active: navActive('/admin/records') }">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-          推荐记录
+          自选记录
         </RouterLink>
         <RouterLink to="/admin/users" class="nav-link" :class="{ active: navActive('/admin/users') }">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>

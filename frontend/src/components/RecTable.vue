@@ -47,7 +47,7 @@ async function deleteRow(row: RecommendationOut) {
   deletingId.value = row.id
   try {
     const res = await api.deleteRec(row.id)
-    toast(res.message || '推荐记录已删除')
+    toast(res.message || '自选记录已删除')
     emit('deleted', row.id)
   } catch (e) {
     toast(e instanceof Error ? e.message : '删除失败')
@@ -71,8 +71,8 @@ function chipAlpha(v: number | null | undefined) {
           <th>代码</th>
           <th>名称</th>
           <th>渠道</th>
-          <th>推荐日</th>
-          <th class="num">推荐价</th>
+          <th>自选日</th>
+          <th class="num">自选价</th>
           <th v-for="label in nodeLabels" :key="label" class="num">{{ label }}</th>
           <th v-if="showAction" class="action"></th>
         </tr>
@@ -91,13 +91,13 @@ function chipAlpha(v: number | null | undefined) {
           </td>
           <td class="td-date">{{ fmtDateShort(row.recommend_date) }}</td>
           <td class="price-cell">{{ fmtPrice(row.recommend_price) }}</td>
-          <td v-for="(node, i) in row.nodes" :key="node.id ?? i" class="num-cell">
+          <td v-for="(label, i) in nodeLabels" :key="label" class="num-cell">
             <span
-              v-if="node.status === 'done' && node.pct_change != null"
+              v-if="row.nodes[i] && row.nodes[i].status === 'done' && row.nodes[i].pct_change != null"
               class="chip"
-              :class="chipClass(node.pct_change)"
-              :style="chipAlpha(node.pct_change)"
-            >{{ fmtPct(node.pct_change) }}</span>
+              :class="chipClass(row.nodes[i].pct_change)"
+              :style="chipAlpha(row.nodes[i].pct_change)"
+            >{{ fmtPct(row.nodes[i].pct_change) }}</span>
             <span v-else class="chip flat">—</span>
           </td>
           <td v-if="showAction" class="action">

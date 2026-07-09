@@ -4,7 +4,15 @@ from sqlalchemy.orm import joinedload
 from app.deps import CurrentAdmin, DbSession
 from app.models import Channel, NodeStatus, Recommendation, User, UserPeriod, UserRole
 from app.schemas import AdminChannelOut, AdminSettingsIn, AdminSettingsOut, AdminUserOut, BindInviterIn, IdIn, MessageOut, RecommendationOut, StockAggOut
-from app.services.app_settings import REGISTER_SMS_REQUIRED, register_sms_required, set_bool
+from app.services.app_settings import (
+    INVITE_VIEW_CHANNELS,
+    INVITE_VIEW_USERS,
+    REGISTER_SMS_REQUIRED,
+    invite_view_channels,
+    invite_view_users,
+    register_sms_required,
+    set_bool,
+)
 from app.services.invites import ensure_invite_code, find_user_by_invite_code
 from app.services.stats import all_node_values, collect_node_values, rec_to_out, stats_from_values
 from app.services.tracking import ensure_user_periods
@@ -262,7 +270,7 @@ def refetch_recommendation(rec_id: int, db: DbSession, admin: CurrentAdmin):
     """重置并重新抓取某条推荐的所有追踪节点。"""
     rec = db.query(Recommendation).filter(Recommendation.id == rec_id).first()
     if not rec:
-        raise HTTPException(404, "推荐记录不存在")
+        raise HTTPException(404, "自选记录不存在")
     from app.services.tracking import process_recommendation_due_nodes, reset_recommendation_nodes
 
     reset_count = reset_recommendation_nodes(db, rec_id)
@@ -286,13 +294,13 @@ def admin_delete_recommendation(rec_id: int, db: DbSession, admin: CurrentAdmin)
 
     rec = db.query(Recommendation).filter(Recommendation.id == rec_id).first()
     if not rec:
-        raise HTTPException(404, "推荐记录不存在")
+        raise HTTPException(404, "自选记录不存在")
     db.query(TrackingNode).filter(TrackingNode.recommendation_id == rec_id).delete(
         synchronize_session=False
     )
     db.delete(rec)
     db.commit()
-    return MessageOut(message="推荐记录已删除")
+    return MessageOut(message="自选记录已删除")
 
 
 @router.post("/recommendations/{rec_id}/delete", response_model=MessageOut)
@@ -369,10 +377,20 @@ def admin_bind_inviter(user_id: int, body: BindInviterIn, db: DbSession, admin: 
 
 @router.get("/settings", response_model=AdminSettingsOut)
 def admin_get_settings(db: DbSession, admin: CurrentAdmin):
-    return AdminSettingsOut(register_sms_required=register_sms_required(db))
+    return AdminSettingsOut(
+        register_sms_required=register_sms_required(db),
+        invite_view_users=invite_view_users(db),
+        invite_view_channels=invite_view_channels(db),
+    )
 
 
 @router.put("/settings", response_model=AdminSettingsOut)
 def admin_update_settings(body: AdminSettingsIn, db: DbSession, admin: CurrentAdmin):
     set_bool(db, REGISTER_SMS_REQUIRED, body.register_sms_required)
-    return AdminSettingsOut(register_sms_required=body.register_sms_required)
+    set_bool(db, INVITE_VIEW_USERS, body.invite_view_users)
+    set_bool(db, INVITE_VIEW_CHANNELS, body.invite_view_channels)
+    return AdminSettingsOut(
+        register_sms_required=body.register_sms_required,
+        invite_view_users=body.invite_view_users,
+        invite_view_channels=body.invite_view_channels,
+    )

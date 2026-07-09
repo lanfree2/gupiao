@@ -1,11 +1,11 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import RecTable from '@/components/RecTable.vue'
 import { tagColor } from '@/utils/colors'
 import { fmtPctVal } from '@/utils/format'
-import type { ChannelStatsOut, RecommendationOut } from '@/types/api'
+import type { ChannelStatsOut, PeriodOut, RecommendationOut } from '@/types/api'
 
 interface ChannelDetail {
   channel: ChannelStatsOut
@@ -16,14 +16,22 @@ interface ChannelDetail {
 
 const route = useRoute()
 const detail = ref<ChannelDetail | null>(null)
+const periods = ref<PeriodOut[]>([])
 const loading = ref(true)
+
+const periodLabels = computed(() => periods.value.map((p) => p.label))
 
 const channelId = computed(() => Number(route.params.id))
 
 async function load() {
   loading.value = true
   try {
-    detail.value = await api.channelDetail(channelId.value) as ChannelDetail
+    const [d, ps] = await Promise.all([
+      api.channelDetail(channelId.value) as Promise<ChannelDetail>,
+      api.periods() as Promise<PeriodOut[]>,
+    ])
+    detail.value = d
+    periods.value = ps
   } finally {
     loading.value = false
   }
@@ -55,7 +63,7 @@ onMounted(load)
 
       <div class="stats">
         <div class="stat">
-          <span class="label">推荐数</span>
+          <span class="label">自选数</span>
           <div class="num">{{ detail.stats.record_count }}</div>
         </div>
         <div class="stat">
@@ -74,14 +82,15 @@ onMounted(load)
 
       <div class="card only-table">
         <div class="card-head">
-          <h3>历史推荐记录（{{ detail.records.length }}）</h3>
+          <h3>历史自选记录（{{ detail.records.length }}）</h3>
           <RouterLink :to="`/tracking?channel=${detail.channel.id}`" class="btn btn-sm btn-ghost">在追踪中查看</RouterLink>
         </div>
         <RecTable
           :rows="detail.records"
+          :periods="periodLabels"
           from="tracking"
           empty-title="该渠道暂无历史记录"
-          empty-desc="录入推荐时选择此渠道，记录会出现在这里"
+          empty-desc="录入自选时选择此渠道，记录会出现在这里"
           @deleted="onDeleted"
         />
       </div>

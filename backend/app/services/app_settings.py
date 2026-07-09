@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from app.models import AppSetting
 
 REGISTER_SMS_REQUIRED = "register_sms_required"
+INVITE_VIEW_USERS = "invite_view_users"
+INVITE_VIEW_CHANNELS = "invite_view_channels"
 
 
 def get_bool(db: Session, key: str, default: bool = False) -> bool:
@@ -24,3 +26,11 @@ def set_bool(db: Session, key: str, value: bool) -> None:
 
 def register_sms_required(db: Session) -> bool:
     return get_bool(db, REGISTER_SMS_REQUIRED, default=False)
+
+
+def invite_view_users(db: Session) -> bool:
+    return get_bool(db, INVITE_VIEW_USERS, default=True)
+
+
+def invite_view_channels(db: Session) -> bool:
+    return get_bool(db, INVITE_VIEW_CHANNELS, default=True)

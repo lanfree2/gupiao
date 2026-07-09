@@ -47,5 +47,14 @@ export interface DashboardOut {
   pending_nodes: number
   channel_win_rates: { name: string; color: string; win_rate: number | null }[]
   channel_avg_returns: { name: string; color: string; avg_return: number | null }[]
+  period_stats: { label: string; days: number; sample: number; win_rate: number | null; avg_return: number | null }[]
+  channel_period_stats: {
+    name: string
+    color: string
+    record_count: number
+    win_rate: number | null
+    avg_return: number | null
+    periods: { label: string; days: number; sample: number; win_rate: number | null; avg_return: number | null }[]
+  }[]
   recent: RecommendationOut[]
 }

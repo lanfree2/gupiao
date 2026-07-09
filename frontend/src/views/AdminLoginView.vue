@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { api } from '@/api/client'
@@ -39,9 +39,9 @@ async function submit() {
       <div class="login-hero-inner">
         <div class="login-kicker">ADMIN · PLATFORM OVERVIEW</div>
         <h1>全站数据<br><em>一览运营全貌</em></h1>
-        <p>查看所有用户的推荐记录、渠道分类与各周期历史业绩，用于平台运营分析与质量监控。</p>
+        <p>查看所有用户的自选记录、渠道分类与各周期历史业绩，用于平台运营分析与质量监控。</p>
         <div class="login-feats">
-          <div class="login-feat"><span class="no">01</span><div><strong>全站股票</strong><span>按代码聚合，查看被推荐次数与各周期表现</span></div></div>
+          <div class="login-feat"><span class="no">01</span><div><strong>全站股票</strong><span>按代码聚合，查看被自选次数与各周期表现</span></div></div>
           <div class="login-feat"><span class="no">02</span><div><strong>全站渠道</strong><span>用户 × 渠道维度，独立统计每个来源的业绩</span></div></div>
           <div class="login-feat"><span class="no">03</span><div><strong>分周期业绩</strong><span>1周至3月各节点胜率、均收益、样本量</span></div></div>
         </div>

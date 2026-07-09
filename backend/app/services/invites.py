@@ -3,7 +3,7 @@ import string
 
 from sqlalchemy.orm import Session
 
-from app.models import Channel, Recommendation, User, UserRole
+from app.models import Channel, InviteeNote, Recommendation, User, UserRole
 
 
 def _random_code(length: int = 8) -> str:
@@ -37,7 +37,29 @@ def mask_phone(phone: str) -> str:
     return phone[:3] + "****" + phone[-4:]
 
 
-def invitee_summary(db: Session, invitee: User) -> dict:
+def get_invitee_note(db: Session, inviter_id: int, invitee_id: int) -> str:
+    row = (
+        db.query(InviteeNote)
+        .filter(InviteeNote.inviter_id == inviter_id, InviteeNote.invitee_id == invitee_id)
+        .first()
+    )
+    return row.note if row else ""
+
+
+def set_invitee_note(db: Session, inviter_id: int, invitee_id: int, note: str) -> None:
+    row = (
+        db.query(InviteeNote)
+        .filter(InviteeNote.inviter_id == inviter_id, InviteeNote.invitee_id == invitee_id)
+        .first()
+    )
+    if row:
+        row.note = note.strip()
+    else:
+        db.add(InviteeNote(inviter_id=inviter_id, invitee_id=invitee_id, note=note.strip()))
+    db.commit()
+
+
+def invitee_summary(db: Session, inviter_id: int, invitee: User) -> dict:
     rec_count = db.query(Recommendation).filter(Recommendation.user_id == invitee.id).count()
     ch_count = db.query(Channel).filter(Channel.user_id == invitee.id, Channel.is_active.is_(True)).count()
     return {
@@ -47,6 +69,7 @@ def invitee_summary(db: Session, invitee: User) -> dict:
         "record_count": rec_count,
         "channel_count": ch_count,
         "created_at": invitee.created_at,
+        "note": get_invitee_note(db, inviter_id, invitee.id),
     }
 
 
@@ -57,7 +80,7 @@ def list_invitees(db: Session, inviter_id: int) -> list[dict]:
         .order_by(User.created_at.desc())
         .all()
     )
-    return [invitee_summary(db, u) for u in users]
+    return [invitee_summary(db, inviter_id, u) for u in users]
 
 
 def assert_can_view_invitee(db: Session, inviter_id: int, invitee_id: int) -> User:

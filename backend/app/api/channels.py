@@ -96,7 +96,7 @@ def delete_channel(channel_id: int, user: CurrentUser, db: DbSession):
         Recommendation.user_id == user.id, Recommendation.channel_id == channel_id
     ).count()
     if count > 0:
-        raise HTTPException(status_code=400, detail=f"该渠道下有 {count} 条推荐记录，无法删除")
+        raise HTTPException(status_code=400, detail=f"该渠道下有 {count} 条自选记录，无法删除")
     db.delete(ch)
     db.commit()
     return MessageOut(message="渠道已删除")

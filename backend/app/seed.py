@@ -42,7 +42,7 @@ def run_seed() -> None:
             for name, color, desc in [
                 ("微信群 A", "blue", "某投资交流群"),
                 ("研报订阅", "green", "券商月度研报"),
-                ("朋友推荐", "orange", "私人好友分享"),
+                ("朋友分享", "orange", "私人好友分享"),
                 ("公众号", "purple", "财经公众号"),
             ]:
                 if not db.query(Channel).filter(Channel.user_id == demo.id, Channel.name == name).first():

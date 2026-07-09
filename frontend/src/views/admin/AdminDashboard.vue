@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, chipClass, fmtPct } from '@/api/client'
@@ -36,7 +36,7 @@ function openRec(id: number) {
     <div class="topbar">
       <div>
         <h2>运营总览</h2>
-        <p class="desc">全站用户与推荐数据概览</p>
+        <p class="desc">全站用户与自选数据概览</p>
       </div>
     </div>
 
@@ -44,7 +44,7 @@ function openRec(id: number) {
     <template v-else-if="data">
       <div class="admin-kpi-grid">
         <div class="stat"><span class="label">注册用户</span><div class="num">{{ data.user_count }}</div></div>
-        <div class="stat"><span class="label">推荐记录</span><div class="num">{{ data.record_count }}</div></div>
+        <div class="stat"><span class="label">自选记录</span><div class="num">{{ data.record_count }}</div></div>
         <div class="stat"><span class="label">涉及股票</span><div class="num">{{ data.stock_count }}</div></div>
         <div class="stat s-up"><span class="label">全站胜率</span><div class="num">{{ data.win_rate != null ? `${Math.round(data.win_rate)}%` : '—' }}</div></div>
       </div>
@@ -59,8 +59,8 @@ function openRec(id: number) {
                 <th>名称</th>
                 <th>用户</th>
                 <th>渠道</th>
-                <th>推荐日</th>
-                <th class="num">推荐价</th>
+                <th>自选日</th>
+                <th class="num">自选价</th>
               </tr>
             </thead>
             <tbody>

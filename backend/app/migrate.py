@@ -29,3 +29,6 @@ def run_migrations() -> None:
         if "app_settings" not in tables:
             # create_all 会建表；此处仅兜底 SQLite 旧库
             pass
+
+        if "invitee_notes" not in tables:
+            pass

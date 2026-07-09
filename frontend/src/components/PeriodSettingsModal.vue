@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, watch } from 'vue'
 import { api } from '@/api/client'
 import { toast } from '@/utils/toast'
@@ -85,7 +85,7 @@ async function save() {
     <div class="modal">
       <h3>自定义追踪周期</h3>
       <p class="modal-desc">
-        设置追踪节点，新录入的推荐将按此配置生成时间表。已有记录的周期不会被修改。
+        设置追踪节点，新录入的自选将按此配置生成时间表。已有记录的周期不会被修改。
       </p>
       <div class="period-list">
         <div v-for="(p, i) in draft" :key="i" class="period-item">

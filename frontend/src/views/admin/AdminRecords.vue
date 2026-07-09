@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, chipClass, fmtPct } from '@/api/client'
@@ -41,8 +41,8 @@ load()
   <div class="page">
     <div class="topbar">
       <div>
-        <h2>推荐记录</h2>
-        <p class="desc">全站所有用户的推荐记录</p>
+        <h2>自选记录</h2>
+        <p class="desc">全站所有用户的自选记录</p>
       </div>
     </div>
 
@@ -70,8 +70,8 @@ load()
               <th>代码</th>
               <th>名称</th>
               <th>渠道</th>
-              <th>推荐日</th>
-              <th class="num">推荐价</th>
+              <th>自选日</th>
+              <th class="num">自选价</th>
               <th v-for="n in rows[0]?.nodes ?? []" :key="n.label" class="num">{{ n.label }}</th>
               <th class="action"></th>
             </tr>
