@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, chipClass, fmtPct } from '@/api/client'
 import { tagColor } from '@/utils/colors'
-import { fmtDateShort, fmtPrice } from '@/utils/format'
+import { fmtDateShort, fmtPrice, isDueDateReached, sortNodesByDueDate } from '@/utils/format'
 import { toast } from '@/utils/toast'
 import type { RecommendationOut } from '@/types/api'
 
@@ -38,6 +38,30 @@ const nodeLabels = computed(() => {
   return first?.nodes.map((n) => n.label) ?? []
 })
 
+const miniLabelIndices = computed(() => {
+  const pl = nodeLabels.value.length
+  if (!pl) return []
+  return [...new Set([0, Math.min(2, pl - 1), pl - 1])]
+})
+
+function latestDoneNode(row: RecommendationOut) {
+  const sorted = sortNodesByDueDate(row.nodes)
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const n = sorted[i]
+    if (isDueDateReached(n.due_date) && n.status === 'done' && n.pct_change != null) {
+      return n
+    }
+  }
+  return null
+}
+
+function heroClass(pct: number | null | undefined) {
+  if (pct == null) return 'flat'
+  if (pct > 0) return 'up'
+  if (pct < 0) return 'down'
+  return 'flat'
+}
+
 function openDetail(id: number) {
   router.push({ path: `/recommendations/${id}`, query: { from: props.from } })
 }
@@ -54,6 +78,16 @@ async function deleteRow(row: RecommendationOut) {
   } finally {
     deletingId.value = null
   }
+}
+
+function nodeForLabel(row: RecommendationOut, label: string) {
+  return row.nodes.find((n) => n.label === label)
+}
+
+function nodePct(row: RecommendationOut, label: string) {
+  const n = nodeForLabel(row, label)
+  if (!n || !isDueDateReached(n.due_date) || n.status !== 'done' || n.pct_change == null) return null
+  return n.pct_change
 }
 
 function chipAlpha(v: number | null | undefined) {
@@ -91,13 +125,13 @@ function chipAlpha(v: number | null | undefined) {
           </td>
           <td class="td-date">{{ fmtDateShort(row.recommend_date) }}</td>
           <td class="price-cell">{{ fmtPrice(row.recommend_price) }}</td>
-          <td v-for="(label, i) in nodeLabels" :key="label" class="num-cell">
+          <td v-for="label in nodeLabels" :key="label" class="num-cell">
             <span
-              v-if="row.nodes[i] && row.nodes[i].status === 'done' && row.nodes[i].pct_change != null"
+              v-if="nodePct(row, label) != null"
               class="chip"
-              :class="chipClass(row.nodes[i].pct_change)"
-              :style="chipAlpha(row.nodes[i].pct_change)"
-            >{{ fmtPct(row.nodes[i].pct_change) }}</span>
+              :class="chipClass(nodePct(row, label))"
+              :style="chipAlpha(nodePct(row, label))"
+            >{{ fmtPct(nodePct(row, label)!) }}</span>
             <span v-else class="chip flat">—</span>
           </td>
           <td v-if="showAction" class="action">
@@ -122,6 +156,49 @@ function chipAlpha(v: number | null | undefined) {
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <div class="mcards">
+    <div v-if="!rows.length" class="empty">
+      <strong>{{ emptyTitle }}</strong>
+      <span v-if="emptyDesc">{{ emptyDesc }}</span>
+    </div>
+    <template v-else>
+      <div
+        v-for="row in rows"
+        :key="`card-${row.id}`"
+        class="mcard"
+        @click="openDetail(row.id)"
+      >
+        <div class="mcard-top">
+          <div class="nm">
+            <span class="code">{{ row.stock_code }}</span>{{ row.stock_name }}
+          </div>
+          <div class="mcard-hero" :class="heroClass(latestDoneNode(row)?.pct_change)">
+            <template v-if="latestDoneNode(row)">
+              <small>{{ latestDoneNode(row)!.label }}</small>{{ fmtPct(latestDoneNode(row)!.pct_change!) }}
+            </template>
+            <template v-else>追踪中</template>
+          </div>
+        </div>
+        <div class="mcard-meta">
+          <span class="tag" :style="{ '--tag-c': tagColor(row.channel_color) }">{{ row.channel_name }}</span>
+          <span class="mono">{{ fmtDateShort(row.recommend_date) }}</span>
+          <span class="mono">¥{{ fmtPrice(row.recommend_price) }}</span>
+        </div>
+        <div v-if="miniLabelIndices.length" class="mcard-nodes">
+          <span
+            v-for="idx in miniLabelIndices"
+            :key="`${row.id}-${idx}`"
+            class="mini"
+            :class="heroClass(nodePct(row, nodeLabels[idx]))"
+          >
+            <i>{{ nodeLabels[idx] }}</i>
+            {{ nodePct(row, nodeLabels[idx]) != null ? fmtPct(nodePct(row, nodeLabels[idx])!) : '—' }}
+          </span>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 

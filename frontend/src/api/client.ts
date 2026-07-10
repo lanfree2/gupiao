@@ -92,7 +92,12 @@ export const api = {
   deleteChannel: (id: number) => deleteWithFallback(id, 'channel'),
   channelDetail: (id: number) => api.get(`/recommendations/channels/${id}/detail`),
   recommendations: (params?: string) => api.get(`/recommendations${params || ''}`),
-  search: (q: string, scope: string) => api.get(`/recommendations/search?q=${encodeURIComponent(q)}&scope=${scope}`),
+  search: (q: string, scope: string, channelId?: number) => {
+    const params = new URLSearchParams({ scope })
+    if (q) params.set('q', q)
+    if (channelId) params.set('channel_id', String(channelId))
+    return api.get(`/recommendations/search?${params}`)
+  },
   getRec: (id: number) => api.get(`/recommendations/${id}`),
   createRec: (body: object) => api.post('/recommendations', body),
   updateRec: (id: number, body: object) => api.put(`/recommendations/${id}`, body),
@@ -136,8 +141,10 @@ export const api = {
   adminUsers: (q?: string) => api.get(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   adminBindInviter: (userId: number, body: { inviter_id?: number | null; invite_code?: string | null }) =>
     api.put<{ message: string }>(`/admin/users/${userId}/inviter`, body),
-  adminSettings: () => api.get<{ register_sms_required: boolean; invite_view_users: boolean; invite_view_channels: boolean }>('/admin/settings'),
-  adminSaveSettings: (body: { register_sms_required: boolean; invite_view_users: boolean; invite_view_channels: boolean }) =>
+  adminSetInviteeChannelPerm: (userId: number, enabled: boolean) =>
+    api.put<{ message: string }>(`/admin/users/${userId}/invitee-channels`, { can_view_invitee_channels: enabled }),
+  adminSettings: () => api.get<{ register_sms_required: boolean; invite_view_users: boolean }>('/admin/settings'),
+  adminSaveSettings: (body: { register_sms_required: boolean; invite_view_users: boolean }) =>
     api.put<{ message: string }>('/admin/settings', body),
 }
 

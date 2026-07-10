@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { toast } from '@/utils/toast'
 import PeriodSettingsModal from '@/components/PeriodSettingsModal.vue'
+import { dueDateForPeriod, inferUnitFromLabel, periodUnitText } from '@/utils/periodCalc'
 import type { ChannelStatsOut, PeriodOut } from '@/types/api'
 
 const NEW = '__new__'
@@ -30,10 +31,9 @@ const today = computed(() => new Date().toISOString().slice(0, 10))
 
 const timeline = computed(() =>
   periods.value.map((p) => {
-    const d = new Date(recommendDate.value)
-    d.setDate(d.getDate() + p.days)
-    const due = d.toISOString().slice(0, 10)
-    return { label: p.label, days: p.days, due, ready: due <= today.value }
+    const unit = p.unit || inferUnitFromLabel(p.label)
+    const due = dueDateForPeriod(recommendDate.value, unit, p.days)
+    return { label: p.label, unit, days: p.days, due, ready: due <= today.value }
   }),
 )
 
@@ -189,10 +189,10 @@ onMounted(loadMeta)
           </div>
           <div class="card-body">
             <p style="color:var(--t2);font-size:13.5px;margin-bottom:14px;line-height:1.7">
-              保存后系统将在各节点到期日自动抓取收盘价。若自选日期较早，已到期节点会<strong>立即抓取历史行情</strong>。
+              保存后系统将在各节点到期日自动抓取收盘价。其中「交易日」节点跳过周末；「周/月」按自然日历计算。
             </p>
             <div class="node-tags">
-              <span v-for="p in periods" :key="p.id" class="node-tag">{{ p.label }}（{{ p.days }}天）</span>
+              <span v-for="p in periods" :key="p.id" class="node-tag">{{ p.label }}（{{ periodUnitText(p.unit || inferUnitFromLabel(p.label), p.days) }}）</span>
             </div>
           </div>
         </div>

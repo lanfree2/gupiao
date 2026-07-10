@@ -16,9 +16,9 @@ from app.schemas import (
     RecommendationUpdateIn,
 )
 from app.services.market_data import get_close_on_or_before, lookup_stock_name, prefetch_close_prices
-from app.services.stats import collect_node_values, rec_to_out, stats_from_values
+from app.services.stats import collect_node_values, rec_to_out, stats_from_values, all_node_values
+from app.services.period_calc import due_date_for_user_period
 from app.services.tracking import (
-    add_trading_days,
     create_tracking_nodes,
     ensure_user_periods,
     process_recommendation_due_nodes,
@@ -114,27 +114,35 @@ def search_recommendations(
     db: DbSession,
     q: str = "",
     scope: str = Query("all", pattern="^(all|stock|channel)$"),
+    channel_id: int | None = None,
 ):
     query = (
         db.query(Recommendation)
         .options(joinedload(Recommendation.nodes), joinedload(Recommendation.channel))
         .filter(Recommendation.user_id == user.id)
     )
+    if channel_id:
+        query = query.filter(Recommendation.channel_id == channel_id)
     items = query.all()
-    if not q:
+    keyword = q.strip()
+    if not keyword:
+        if scope in ("stock", "channel"):
+            return []
         items = sorted(items, key=lambda r: r.recommend_date, reverse=True)
         return [RecommendationOut(**rec_to_out(r)) for r in items]
-    ql = q.lower()
+    ql = keyword.lower()
     result = []
     for r in items:
-        if scope == "stock" and (q in r.stock_code or q in r.stock_name):
+        code = (r.stock_code or "").lower()
+        name = (r.stock_name or "").lower()
+        ch = (r.channel.name if r.channel else "").lower()
+        if scope == "stock" and (ql in code or ql in name):
             result.append(r)
-        elif scope == "channel" and q in r.channel.name:
+        elif scope == "channel" and ql in ch:
             result.append(r)
-        elif scope == "all" and (
-            q in r.stock_code or q in r.stock_name or q in r.channel.name
-        ):
+        elif scope == "all" and (ql in code or ql in name or ql in ch):
             result.append(r)
+    result.sort(key=lambda r: r.recommend_date, reverse=True)
     return [RecommendationOut(**rec_to_out(r)) for r in result]
 
 
@@ -153,7 +161,7 @@ def channel_detail(channel_id: int, user: CurrentUser, db: DbSession):
     periods = ensure_user_periods(db, user.id)
     period_stats = []
     for i, p in enumerate(periods):
-        vals = collect_node_values(recs, i)
+        vals = collect_node_values(recs, p.label)
         win_rate, avg = stats_from_values(vals)
         period_stats.append(
             {
@@ -164,11 +172,7 @@ def channel_detail(channel_id: int, user: CurrentUser, db: DbSession):
                 "avg_return": avg,
             }
         )
-    all_vals = []
-    for r in recs:
-        for n in r.nodes:
-            if n.status == NodeStatus.done and n.pct_change is not None:
-                all_vals.append(n.pct_change)
+    all_vals = all_node_values(recs)
     win_rate, avg = stats_from_values(all_vals)
     return {
         "channel": ChannelOut.model_validate(ch),
@@ -239,7 +243,7 @@ def create_recommendation(body: RecommendationIn, user: CurrentUser, db: DbSessi
     stock_name = body.stock_name or lookup_stock_name(body.stock_code) or "未知"
     stock_code = body.stock_code.strip()
     periods = ensure_user_periods(db, user.id)
-    due_dates = [add_trading_days(body.recommend_date, p.days) for p in periods]
+    due_dates = [due_date_for_user_period(body.recommend_date, p) for p in periods]
     prefetch_close_prices(db, stock_code, [body.recommend_date, *due_dates])
     recommend_price = _resolve_recommend_price(db, stock_code, body.recommend_date, body.recommend_price)
     rec = Recommendation(

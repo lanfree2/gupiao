@@ -2,6 +2,7 @@ export interface NodeOut {
   id: number
   label: string
   days: number
+  sort_order?: number
   due_date: string
   status: string
   close_price: number | null
@@ -37,6 +38,7 @@ export interface PeriodOut {
   id: number
   label: string
   days: number
+  unit: 'trading_day' | 'natural_week' | 'natural_month'
   sort_order: number
 }
 

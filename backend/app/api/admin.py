@@ -3,12 +3,21 @@ from sqlalchemy.orm import joinedload
 
 from app.deps import CurrentAdmin, DbSession
 from app.models import Channel, NodeStatus, Recommendation, User, UserPeriod, UserRole
-from app.schemas import AdminChannelOut, AdminSettingsIn, AdminSettingsOut, AdminUserOut, BindInviterIn, IdIn, MessageOut, RecommendationOut, StockAggOut
+from app.schemas import (
+    AdminChannelOut,
+    AdminSettingsIn,
+    AdminSettingsOut,
+    AdminUserOut,
+    BindInviterIn,
+    IdIn,
+    InviteeChannelPermIn,
+    MessageOut,
+    RecommendationOut,
+    StockAggOut,
+)
 from app.services.app_settings import (
-    INVITE_VIEW_CHANNELS,
     INVITE_VIEW_USERS,
     REGISTER_SMS_REQUIRED,
-    invite_view_channels,
     invite_view_users,
     register_sms_required,
     set_bool,
@@ -65,7 +74,7 @@ def admin_stocks(db: DbSession, admin: CurrentAdmin, q: str | None = None):
         users = len({r.user_id for r in items})
         period_avgs = []
         for i in range(plen):
-            vals = collect_node_values(items, i)
+            vals = collect_node_values(items, p.label)
             _, avg = stats_from_values(vals)
             period_avgs.append(avg)
         result.append(
@@ -107,7 +116,7 @@ def admin_stock_detail(code: str, db: DbSession, admin: CurrentAdmin):
         labels = ["1周", "2周", "1月", "2月", "3月"]
     period_stats = []
     for i, label in enumerate(labels[:5]):
-        vals = collect_node_values(recs, i)
+        vals = collect_node_values(recs, label)
         wr, ar = stats_from_values(vals)
         period_stats.append({"label": label, "sample": len(vals), "win_rate": wr, "avg_return": ar})
     return {
@@ -184,12 +193,12 @@ def admin_channel_detail(channel_id: int, db: DbSession, admin: CurrentAdmin):
     )
     periods_meta = db.query(UserPeriod).filter(UserPeriod.user_id == ch.user_id).order_by(UserPeriod.sort_order).all()
     if not periods_meta:
-        from app.services.tracking import DEFAULT_PERIODS
+        from app.services.period_calc import DEFAULT_PERIODS
 
-        periods_meta = [type("P", (), {"label": l, "days": d})() for l, d in DEFAULT_PERIODS]
+        periods_meta = [type("P", (), {"label": l, "days": d, "unit": u})() for l, d, u in DEFAULT_PERIODS]
     period_stats = []
     for i, p in enumerate(periods_meta):
-        vals = collect_node_values(recs, i)
+        vals = collect_node_values(recs, p.label)
         wr, ar = stats_from_values(vals)
         wins = sum(1 for v in vals if v > 0)
         period_stats.append(
@@ -340,6 +349,7 @@ def admin_users(db: DbSession, admin: CurrentAdmin, q: str = ""):
                 inviter_id=inviter.id if inviter else None,
                 inviter_nickname=inviter.nickname if inviter else None,
                 invitee_count=invitee_count,
+                can_view_invitee_channels=bool(u.can_view_invitee_channels),
                 created_at=u.created_at,
             )
         )
@@ -375,12 +385,23 @@ def admin_bind_inviter(user_id: int, body: BindInviterIn, db: DbSession, admin: 
     return MessageOut(message=f"已绑定邀请人：{inviter.nickname}")
 
 
+@router.put("/users/{user_id}/invitee-channels", response_model=MessageOut)
+def admin_set_invitee_channel_perm(user_id: int, body: InviteeChannelPermIn, db: DbSession, admin: CurrentAdmin):
+    user = db.query(User).filter(User.id == user_id, User.role == UserRole.user).first()
+    if not user:
+        raise HTTPException(404, detail="用户不存在")
+    user.can_view_invitee_channels = body.can_view_invitee_channels
+    db.commit()
+    if body.can_view_invitee_channels:
+        return MessageOut(message=f"已开通「{user.nickname}」查看受邀用户渠道与自选权限")
+    return MessageOut(message=f"已关闭「{user.nickname}」查看受邀用户渠道与自选权限")
+
+
 @router.get("/settings", response_model=AdminSettingsOut)
 def admin_get_settings(db: DbSession, admin: CurrentAdmin):
     return AdminSettingsOut(
         register_sms_required=register_sms_required(db),
         invite_view_users=invite_view_users(db),
-        invite_view_channels=invite_view_channels(db),
     )
 
 
@@ -388,9 +409,7 @@ def admin_get_settings(db: DbSession, admin: CurrentAdmin):
 def admin_update_settings(body: AdminSettingsIn, db: DbSession, admin: CurrentAdmin):
     set_bool(db, REGISTER_SMS_REQUIRED, body.register_sms_required)
     set_bool(db, INVITE_VIEW_USERS, body.invite_view_users)
-    set_bool(db, INVITE_VIEW_CHANNELS, body.invite_view_channels)
     return AdminSettingsOut(
         register_sms_required=body.register_sms_required,
         invite_view_users=body.invite_view_users,
-        invite_view_channels=body.invite_view_channels,
     )

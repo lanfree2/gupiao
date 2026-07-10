@@ -5,7 +5,7 @@ from app.config import get_settings
 from app.database import SessionLocal
 from app.deps import hash_password
 from app.models import Channel, User, UserRole
-from app.services.tracking import DEFAULT_PERIODS, ensure_user_periods
+from app.services.tracking import ensure_user_periods
 
 settings = get_settings()
 

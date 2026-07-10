@@ -2,9 +2,9 @@ from fastapi import APIRouter
 from sqlalchemy.orm import joinedload
 
 from app.deps import CurrentUser, DbSession
-from app.models import Channel, NodeStatus, Recommendation
+from app.models import Channel, Recommendation
 from app.schemas import DashboardOut, RecommendationOut
-from app.services.stats import all_node_values, collect_node_values, rec_to_out, stats_from_values
+from app.services.stats import all_node_values, collect_node_values, count_due_pending_nodes, rec_to_out, stats_from_values
 from app.services.tracking import ensure_user_periods
 
 router = APIRouter(prefix="/dashboard", tags=["总览"])
@@ -21,13 +21,11 @@ def dashboard(user: CurrentUser, db: DbSession):
     )
     all_vals = all_node_values(recs)
     win_rate, avg_return = stats_from_values(all_vals)
-    pending = sum(
-        1 for r in recs for n in r.nodes if n.status == NodeStatus.pending
-    )
+    pending = count_due_pending_nodes(recs)
     periods = ensure_user_periods(db, user.id)
     period_stats = []
     for i, p in enumerate(periods):
-        vals = collect_node_values(recs, i)
+        vals = collect_node_values(recs, p.label)
         wr, ar = stats_from_values(vals)
         period_stats.append(
             {
@@ -50,7 +48,7 @@ def dashboard(user: CurrentUser, db: DbSession):
         channel_avg_returns.append({"name": ch.name, "color": ch.color, "avg_return": ar})
         ch_periods = []
         for i, p in enumerate(periods):
-            pvals = collect_node_values(ch_recs, i)
+            pvals = collect_node_values(ch_recs, p.label)
             pwr, par = stats_from_values(pvals)
             ch_periods.append(
                 {

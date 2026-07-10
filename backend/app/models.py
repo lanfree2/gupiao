@@ -36,6 +36,7 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     invite_code: Mapped[str | None] = mapped_column(String(16), unique=True, index=True, nullable=True)
     invited_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    can_view_invitee_channels: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     periods: Mapped[list["UserPeriod"]] = relationship(back_populates="user", cascade="all, delete-orphan")
@@ -87,6 +88,7 @@ class UserPeriod(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     label: Mapped[str] = mapped_column(String(32))
     days: Mapped[int] = mapped_column(Integer)
+    unit: Mapped[str] = mapped_column(String(16), default="trading_day")
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     user: Mapped["User"] = relationship(back_populates="periods")
@@ -134,6 +136,7 @@ class TrackingNode(Base):
     recommendation_id: Mapped[int] = mapped_column(ForeignKey("recommendations.id", ondelete="CASCADE"), index=True)
     label: Mapped[str] = mapped_column(String(32))
     days: Mapped[int] = mapped_column(Integer)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
     due_date: Mapped[date] = mapped_column(Date, index=True)
     status: Mapped[NodeStatus] = mapped_column(Enum(NodeStatus), default=NodeStatus.pending)
     close_price: Mapped[float | None] = mapped_column(Float, nullable=True)

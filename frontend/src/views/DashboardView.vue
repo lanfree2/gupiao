@@ -10,8 +10,24 @@ import type { DashboardOut, PeriodOut } from '@/types/api'
 const data = ref<DashboardOut | null>(null)
 const periods = ref<PeriodOut[]>([])
 const loading = ref(true)
+const selectedPeriod = ref('')
 
 const periodLabels = computed(() => periods.value.map((p) => p.label))
+
+const channelPeriodRows = computed(() => {
+  if (!data.value || !selectedPeriod.value) return []
+  return data.value.channel_period_stats.map((ch) => {
+    const p = ch.periods.find((x) => x.label === selectedPeriod.value)
+    return {
+      name: ch.name,
+      color: ch.color,
+      record_count: ch.record_count,
+      win_rate: p?.win_rate ?? null,
+      avg_return: p?.avg_return ?? null,
+      sample: p?.sample ?? 0,
+    }
+  })
+})
 
 async function load() {
   loading.value = true
@@ -22,6 +38,9 @@ async function load() {
     ])
     data.value = dash
     periods.value = ps
+    if (!selectedPeriod.value && ps.length) {
+      selectedPeriod.value = ps[0].label
+    }
   } finally {
     loading.value = false
   }
@@ -43,7 +62,7 @@ onMounted(load)
     <div class="topbar">
       <div>
         <h2>我的总览</h2>
-        <p class="desc">按渠道查看各周期表现</p>
+        <p class="desc">按周期对比各渠道胜率与收益</p>
       </div>
       <RouterLink to="/add" class="btn btn-primary">＋ 录入自选</RouterLink>
     </div>
@@ -73,33 +92,46 @@ onMounted(load)
         </div>
       </div>
 
-      <div v-if="data.channel_period_stats.length" class="channel-period-grid">
-        <div v-for="ch in data.channel_period_stats" :key="ch.name" class="card channel-period-card">
-          <div class="card-head">
-            <div class="ch-head-left">
-              <span class="tag" :style="{ '--tag-c': tagColor(ch.color) }">{{ ch.name }}</span>
-              <span class="dim ch-meta">{{ ch.record_count }} 条 · 胜率 {{ ch.win_rate != null ? `${Math.round(ch.win_rate)}%` : '—' }} · 均收益 {{ fmtPctVal(ch.avg_return) }}</span>
+      <div class="card">
+        <div class="card-head">
+          <h3>渠道周期分析</h3>
+          <select v-model="selectedPeriod" class="form-control period-select">
+            <option v-for="p in periods" :key="p.id" :value="p.label">{{ p.label }}</option>
+          </select>
+        </div>
+        <div class="card-body">
+          <template v-if="channelPeriodRows.length">
+            <p class="dim section-desc">当前周期：<strong>{{ selectedPeriod }}</strong> · 各渠道胜率对比</p>
+            <div v-for="ch in channelPeriodRows" :key="ch.name" class="bar-row">
+              <span class="ch-name">
+                <span class="tag" :style="{ '--tag-c': tagColor(ch.color) }">{{ ch.name }}</span>
+              </span>
+              <div class="bar">
+                <i v-if="ch.win_rate != null" :style="{ width: `${ch.win_rate}%`, background: tagColor(ch.color) }" />
+              </div>
+              <span class="pctv">{{ ch.win_rate != null ? `${Math.round(ch.win_rate)}%` : '—' }}</span>
             </div>
-          </div>
-          <div class="card-body">
-            <div v-for="p in ch.periods" :key="p.label" class="bar-row">
-              <span>{{ p.label }}</span>
+
+            <p class="dim section-desc" style="margin-top:20px">各渠道平均收益（{{ selectedPeriod }}）</p>
+            <div v-for="ch in channelPeriodRows" :key="`ar-${ch.name}`" class="bar-row">
+              <span class="ch-name">
+                <span class="tag" :style="{ '--tag-c': tagColor(ch.color) }">{{ ch.name }}</span>
+              </span>
               <div class="bar">
                 <i
-                  v-if="p.avg_return != null"
-                  :style="{ width: `${Math.min(Math.abs(p.avg_return) * 10, 100)}%`, background: tagColor(ch.color) }"
+                  v-if="ch.avg_return != null"
+                  :style="{ width: `${Math.min(Math.abs(ch.avg_return) * 10, 100)}%`, background: tagColor(ch.color) }"
                 />
               </div>
-              <span class="pctv" :style="p.avg_return != null ? { color: p.avg_return >= 0 ? 'var(--up)' : 'var(--down)' } : {}">
-                {{ fmtPctVal(p.avg_return) }}
-              </span>
+              <span
+                class="pctv"
+                :style="ch.avg_return != null ? { color: ch.avg_return >= 0 ? 'var(--up)' : 'var(--down)' } : {}"
+              >{{ fmtPctVal(ch.avg_return) }}</span>
             </div>
-            <p class="dim period-foot">{{ ch.periods.map((p) => `${p.label} ${p.sample}样本`).join(' · ') }}</p>
-          </div>
+            <p class="dim period-foot">{{ channelPeriodRows.map((c) => `${c.name} ${c.sample}样本`).join(' · ') }}</p>
+          </template>
+          <p v-else class="dim">暂无渠道数据</p>
         </div>
-      </div>
-      <div v-else class="card">
-        <div class="card-body"><p class="dim">暂无渠道数据，先录入自选并创建渠道</p></div>
       </div>
 
       <div class="card only-table">
@@ -121,19 +153,9 @@ onMounted(load)
 </template>
 
 <style scoped>
-.channel-period-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 22px;
-  margin-bottom: 22px;
-}
-.channel-period-card { margin-bottom: 0; }
-.ch-head-left {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-start;
-}
-.ch-meta { font-size: 12px; }
-.period-foot { margin-top: 12px; font-size: 12px; }
+.period-select { min-width: 140px; padding: 8px 10px; font-size: 13px; }
+.section-desc { margin: 0 0 12px; font-size: 13px; }
+.ch-name { min-width: 100px; }
+.period-foot { margin-top: 14px; font-size: 12px; }
+.bar-row .tag { font-size: 12px; }
 </style>

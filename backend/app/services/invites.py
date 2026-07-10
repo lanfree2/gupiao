@@ -95,3 +95,7 @@ def backfill_invite_codes(db: Session) -> int:
     for u in users:
         ensure_invite_code(db, u)
     return len(users)
+
+
+def can_inviter_view_channels(user: User) -> bool:
+    return bool(getattr(user, "can_view_invitee_channels", False))

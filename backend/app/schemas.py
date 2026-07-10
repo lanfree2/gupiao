@@ -116,19 +116,22 @@ class AdminUserOut(BaseModel):
     inviter_id: int | None
     inviter_nickname: str | None
     invitee_count: int
+    can_view_invitee_channels: bool = False
     created_at: datetime
 
 
 class AdminSettingsOut(BaseModel):
     register_sms_required: bool
     invite_view_users: bool = True
-    invite_view_channels: bool = True
 
 
 class AdminSettingsIn(BaseModel):
     register_sms_required: bool
     invite_view_users: bool = True
-    invite_view_channels: bool = True
+
+
+class InviteeChannelPermIn(BaseModel):
+    can_view_invitee_channels: bool
 
 
 class BindInviterIn(BaseModel):
@@ -136,15 +139,19 @@ class BindInviterIn(BaseModel):
     invite_code: str | None = None
 
 
+from typing import Literal
+
 class PeriodIn(BaseModel):
     label: str
     days: int = Field(gt=0, le=365)
+    unit: Literal["trading_day", "natural_week", "natural_month"] = "trading_day"
 
 
 class PeriodOut(BaseModel):
     id: int
     label: str
     days: int
+    unit: str = "trading_day"
     sort_order: int
 
     class Config:
@@ -198,6 +205,7 @@ class NodeOut(BaseModel):
     id: int
     label: str
     days: int
+    sort_order: int = 0
     due_date: date
     status: str
     close_price: float | None

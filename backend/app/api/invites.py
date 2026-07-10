@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy.orm import joinedload
 
 from app.deps import CurrentUser, DbSession
-from app.models import Channel, InviteeNote, Recommendation
+from app.models import Channel, Recommendation
 from app.schemas import (
     ChannelStatsOut,
     InviteConfigOut,
@@ -12,11 +12,11 @@ from app.schemas import (
     MessageOut,
     RecommendationOut,
 )
-from app.services.app_settings import invite_view_channels, invite_view_users
+from app.services.app_settings import invite_view_users
 from app.services.invites import (
     assert_can_view_invitee,
+    can_inviter_view_channels,
     ensure_invite_code,
-    get_invitee_note,
     list_invitees,
     set_invitee_note,
 )
@@ -47,7 +47,7 @@ def _channel_stats(db, user_id: int, ch: Channel) -> ChannelStatsOut:
 def invite_config(user: CurrentUser, db: DbSession):
     return InviteConfigOut(
         view_users=invite_view_users(db),
-        view_channels=invite_view_channels(db),
+        view_channels=can_inviter_view_channels(user),
     )
 
 
@@ -83,8 +83,8 @@ def save_invitee_note(invitee_id: int, body: InviteeNoteIn, user: CurrentUser, d
 
 @router.get("/invitees/{invitee_id}/channels", response_model=list[ChannelStatsOut])
 def invitee_channels(invitee_id: int, user: CurrentUser, db: DbSession):
-    if not invite_view_channels(db):
-        raise HTTPException(status_code=403, detail="管理员已关闭查看受邀用户渠道")
+    if not can_inviter_view_channels(user):
+        raise HTTPException(status_code=403, detail="暂无查看受邀用户渠道的权限，请联系管理员开通")
     try:
         invitee = assert_can_view_invitee(db, user.id, invitee_id)
     except PermissionError as exc:
@@ -95,8 +95,8 @@ def invitee_channels(invitee_id: int, user: CurrentUser, db: DbSession):
 
 @router.get("/invitees/{invitee_id}/channels/{channel_id}/recommendations", response_model=list[RecommendationOut])
 def invitee_channel_recommendations(invitee_id: int, channel_id: int, user: CurrentUser, db: DbSession):
-    if not invite_view_channels(db):
-        raise HTTPException(status_code=403, detail="管理员已关闭查看受邀用户渠道")
+    if not can_inviter_view_channels(user):
+        raise HTTPException(status_code=403, detail="暂无查看受邀用户渠道的权限，请联系管理员开通")
     try:
         invitee = assert_can_view_invitee(db, user.id, invitee_id)
     except PermissionError as exc:
@@ -116,8 +116,8 @@ def invitee_channel_recommendations(invitee_id: int, channel_id: int, user: Curr
 
 @router.get("/invitees/{invitee_id}/recommendations", response_model=list[RecommendationOut])
 def invitee_recommendations(invitee_id: int, user: CurrentUser, db: DbSession):
-    if not invite_view_channels(db):
-        raise HTTPException(status_code=403, detail="管理员已关闭查看受邀用户渠道")
+    if not can_inviter_view_channels(user):
+        raise HTTPException(status_code=403, detail="暂无查看受邀用户渠道的权限，请联系管理员开通")
     try:
         invitee = assert_can_view_invitee(db, user.id, invitee_id)
     except PermissionError as exc:

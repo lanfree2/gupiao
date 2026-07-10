@@ -33,4 +33,4 @@ def invite_view_users(db: Session) -> bool:
 
 
 def invite_view_channels(db: Session) -> bool:
-    return get_bool(db, INVITE_VIEW_CHANNELS, default=True)
+    return get_bool(db, INVITE_VIEW_CHANNELS, default=False)

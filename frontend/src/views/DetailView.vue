@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { api, chipClass, fmtPct } from '@/api/client'
 import { tagColor } from '@/utils/colors'
-import { fmtDateShort, fmtPrice } from '@/utils/format'
+import { fmtDateShort, fmtPrice, isDueDateReached, sortNodesByDueDate } from '@/utils/format'
 import { toast } from '@/utils/toast'
 import type { RecommendationOut } from '@/types/api'
 
@@ -30,6 +30,11 @@ const backPath = computed(() => {
 
 const isAdminView = computed(() => route.query.from === 'admin')
 
+const nodesByDueDate = computed(() => {
+  if (!rec.value) return []
+  return sortNodesByDueDate(rec.value.nodes)
+})
+
 const railTimeline = computed(() => {
   if (!rec.value) return []
   const open = {
@@ -41,17 +46,24 @@ const railTimeline = computed(() => {
     status: 'done' as const,
     isOpen: true,
   }
-  const nodes = rec.value.nodes.map((node) => ({
+  const nodes = nodesByDueDate.value.map((node) => ({
     key: String(node.id),
     label: node.label,
     date: node.due_date,
-    price: node.close_price,
-    pct: node.pct_change,
-    status: node.status,
+    price: isDueDateReached(node.due_date) ? node.close_price : null,
+    pct: isDueDateReached(node.due_date) && node.status === 'done' ? node.pct_change : null,
+    status: !isDueDateReached(node.due_date) ? 'pending' as const : node.status,
     isOpen: false,
   }))
   return [open, ...nodes]
 })
+
+function nodeStatusLabel(node: { due_date: string; status: string }) {
+  if (!isDueDateReached(node.due_date)) return '待到期'
+  if (node.status === 'done') return '已完成'
+  if (node.status === 'failed') return '获取失败'
+  return '待抓取'
+}
 
 async function load() {
   loading.value = true
@@ -259,7 +271,7 @@ onMounted(load)
             <thead>
               <tr>
                 <th>节点</th>
-                <th>天数</th>
+                <th>周期</th>
                 <th>到期日</th>
                 <th>状态</th>
                 <th class="num">收盘价</th>
@@ -269,21 +281,21 @@ onMounted(load)
             <tbody>
               <tr class="open-row">
                 <td>开仓</td>
-                <td class="mono">0天</td>
+                <td class="mono">开仓</td>
                 <td class="td-date">{{ rec.recommend_date }}</td>
                 <td>已开仓</td>
                 <td class="price-cell">{{ fmtPrice(rec.recommend_price) }}</td>
                 <td class="num-cell"><span class="chip flat">基准</span></td>
               </tr>
-              <tr v-for="node in rec.nodes" :key="node.id">
+              <tr v-for="node in nodesByDueDate" :key="node.id">
                 <td>{{ node.label }}</td>
-                <td class="mono">{{ node.days }}天</td>
+                <td>{{ node.label }}</td>
                 <td class="td-date">{{ node.due_date }}</td>
-                <td>{{ node.status === 'done' ? '已完成' : '待到期' }}</td>
-                <td class="price-cell">{{ node.close_price != null ? fmtPrice(node.close_price) : '—' }}</td>
+                <td>{{ nodeStatusLabel(node) }}</td>
+                <td class="price-cell">{{ isDueDateReached(node.due_date) && node.close_price != null ? fmtPrice(node.close_price) : '—' }}</td>
                 <td class="num-cell">
                   <span
-                    v-if="node.pct_change != null"
+                    v-if="isDueDateReached(node.due_date) && node.pct_change != null"
                     class="chip"
                     :class="chipClass(node.pct_change)"
                   >{{ fmtPct(node.pct_change) }}</span>

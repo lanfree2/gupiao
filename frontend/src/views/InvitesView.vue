@@ -197,8 +197,8 @@ onMounted(load)
               </button>
             </div>
 
-            <div v-if="!config.view_channels" class="card-body">
-              <p class="dim">管理员已关闭查看受邀用户的渠道与自选记录</p>
+            <div v-if="!config.view_channels" class="card-body channel-locked">
+              <p class="dim">渠道与自选记录未开放。默认仅可查看受邀用户信息与备注，如需查看渠道/股票请联系管理员开通权限。</p>
             </div>
             <template v-else>
               <div v-if="detailLoading && !selectedChannelId" class="empty"><strong>加载中…</strong></div>

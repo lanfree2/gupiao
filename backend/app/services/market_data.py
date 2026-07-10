@@ -289,23 +289,91 @@ def _parse_code_name_df(df) -> dict[str, str]:
     return out
 
 
+def _to_em_symbol(code: str) -> str:
+    if code.startswith(("8", "4")):
+        return f"bj{code}"
+    if code.startswith(("5", "6", "9")):
+        return f"sh{code}"
+    return f"sz{code}"
+
+
+@lru_cache(maxsize=1)
+def _bj_code_name_map() -> dict[str, str]:
+    with _without_system_proxy():
+        import akshare as ak
+
+        try:
+            df = ak.stock_info_bj_name_code()
+            return _parse_code_name_df(df)
+        except Exception:
+            return {}
+
+
+def _lookup_name_spot_em(code: str) -> str | None:
+    with _without_system_proxy():
+        import akshare as ak
+
+        try:
+            df = ak.stock_zh_a_spot_em()
+            if df is None or df.empty:
+                return None
+            code_col = next((c for c in df.columns if "代码" in str(c) or str(c).lower() == "code"), df.columns[0])
+            name_col = next((c for c in df.columns if "名称" in str(c) or "简称" in str(c)), df.columns[1])
+            for _, row in df.iterrows():
+                if _norm_stock_code(row[code_col]) == code:
+                    name = str(row[name_col]).strip()
+                    if name and name != "nan":
+                        return name
+        except Exception as exc:
+            logger.warning("spot_em 查名称失败 %s: %s", code, exc)
+    return None
+
+
+def _lookup_name_individual_em(code: str) -> str | None:
+    with _without_system_proxy():
+        import akshare as ak
+
+        try:
+            symbol = _to_em_symbol(code)
+            df = ak.stock_individual_info_em(symbol=symbol)
+            if df is None or df.empty:
+                return None
+            item_col = df.columns[0]
+            val_col = df.columns[1]
+            for _, row in df.iterrows():
+                if "股票简称" in str(row[item_col]) or "证券简称" in str(row[item_col]):
+                    name = str(row[val_col]).strip()
+                    if name and name != "nan":
+                        return name
+        except Exception as exc:
+            logger.warning("individual_em 查名称失败 %s: %s", code, exc)
+    return None
+
+
 def lookup_stock_name(stock_code: str) -> str | None:
     code = _norm_stock_code(stock_code)
-    maps: list[dict[str, str]] = []
     try:
-        if code.startswith(("5", "6", "9")):
+        maps: list[dict[str, str]] = []
+        if code.startswith(("8", "4")):
+            maps.append(_bj_code_name_map())
+        elif code.startswith(("5", "6", "9")):
             maps.append(_sh_code_name_map())
         else:
             maps.append(_sz_code_name_map())
         maps.append(_all_a_code_name_map())
-        if code.startswith(("5", "6", "9")):
-            maps.append(_sz_code_name_map())
-        else:
-            maps.append(_sh_code_name_map())
+        maps.append(_sh_code_name_map())
+        maps.append(_sz_code_name_map())
+        maps.append(_bj_code_name_map())
         for m in maps:
             name = m.get(code)
             if name:
                 return name
+        name = _lookup_name_spot_em(code)
+        if name:
+            return name
+        name = _lookup_name_individual_em(code)
+        if name:
+            return name
     except Exception as exc:
         logger.warning("akshare 查名称失败 %s: %s", code, exc)
     fallback = {
@@ -335,5 +403,6 @@ def get_close_on_or_before(
 
 
 def add_trading_days(start: date, n: int) -> date:
-    """简化：按自然日加；生产可换交易日历表。"""
-    return start + timedelta(days=n)
+    from app.services.period_calc import add_trading_days as _add_trading_days
+
+    return _add_trading_days(start, n)
