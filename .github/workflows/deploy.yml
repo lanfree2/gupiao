@@ -30,12 +30,25 @@ jobs:
             echo "Waiting for API health..."
             for i in $(seq 1 30); do
               if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then
-                echo "Deploy successful"
-                docker compose ps
-                exit 0
+                echo "API healthy"
+                break
               fi
               sleep 3
+              if [ "$i" -eq 30 ]; then
+                echo "Health check failed"
+                docker compose logs --tail=80 api
+                exit 1
+              fi
             done
-            echo "Health check failed"
-            docker compose logs --tail=80 api
-            exit 1
+            if curl -fsS -o /dev/null http://127.0.0.1:8080/ 2>/dev/null; then
+              echo "Web on :8080 OK"
+            else
+              echo "WARN: web :8080 not responding"
+              docker compose ps
+            fi
+            if command -v caddy >/dev/null 2>&1 && [ -f /etc/caddy/Caddyfile ]; then
+              sudo systemctl restart caddy || sudo systemctl start caddy || true
+              echo "Caddy restarted"
+            fi
+            echo "Deploy successful"
+            docker compose ps
