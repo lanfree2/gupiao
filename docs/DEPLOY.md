@@ -109,18 +109,50 @@ docker compose logs -f api
 
 ---
 
-## 6. HTTPS（可选）
+## 6. HTTPS（Caddy + 域名）
 
-推荐使用 Caddy 或 Nginx 反向代理 + Let's Encrypt：
+前置：域名 A 记录指向服务器；安全组放行 **80、443**。
+
+Docker `web` 只监听本机 `8080`，公网 80/443 由 Caddy 接管（避免端口冲突）。
+
+### 6.1 安装 Caddy（Ubuntu）
 
 ```bash
-# 示例：Caddy 自动 HTTPS
-your.domain.com {
-    reverse_proxy localhost:80
-}
+sudo apt update
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update
+sudo apt install -y caddy
 ```
 
-同时将 `.env` 中 `CORS_ORIGINS` 改为 `https://your.domain.com`。
+### 6.2 Caddy 配置
+
+参考仓库 `deploy/Caddyfile.example`，例如：
+
+```bash
+sudo tee /etc/caddy/Caddyfile <<'EOF'
+carlingbuy.com, www.carlingbuy.com {
+    reverse_proxy localhost:8080
+}
+EOF
+sudo systemctl start caddy
+sudo systemctl enable caddy
+```
+
+### 6.3 更新 `.env`
+
+```env
+CORS_ORIGINS=https://carlingbuy.com,https://www.carlingbuy.com
+```
+
+```bash
+docker compose restart api
+```
+
+访问：`https://carlingbuy.com`
+
+若 Caddy 报 `address already in use`，确认 `docker-compose.yml` 中 web 为 `127.0.0.1:8080:80` 而非 `80:80`，然后 `docker compose up -d`。
 
 ---
 

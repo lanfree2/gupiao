@@ -1,0 +1,4 @@
+# 服务器 /etc/caddy/Caddyfile 示例（Caddy 监听 80/443，反代到 Docker web）
+carlingbuy.com, www.carlingbuy.com {
+    reverse_proxy localhost:8080
+}
