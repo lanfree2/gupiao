@@ -134,6 +134,8 @@ docker compose restart
 git pull
 docker compose up -d --build
 
+# 或启用 GitHub Actions 自动部署（见 docs/CICD.md）
+
 # 查看 Worker 日志
 docker compose logs -f worker
 
