@@ -13,6 +13,13 @@ def _has_column(table: str, column: str) -> bool:
     return column in {c["name"] for c in inspect(engine).get_columns(table)}
 
 
+def _bool_column_def() -> str:
+    """PostgreSQL 要求 BOOLEAN 默认值为 false，不能用 0。"""
+    if engine.dialect.name == "postgresql":
+        return "BOOLEAN DEFAULT false"
+    return "BOOLEAN DEFAULT 0"
+
+
 def run_migrations() -> None:
     insp = inspect(engine)
     tables = set(insp.get_table_names())
@@ -26,7 +33,7 @@ def run_migrations() -> None:
                 conn.execute(text("ALTER TABLE users ADD COLUMN invited_by_id INTEGER"))
                 logger.info("migration: users.invited_by_id added")
             if not _has_column("users", "can_view_invitee_channels"):
-                conn.execute(text("ALTER TABLE users ADD COLUMN can_view_invitee_channels BOOLEAN DEFAULT 0"))
+                conn.execute(text(f"ALTER TABLE users ADD COLUMN can_view_invitee_channels {_bool_column_def()}"))
                 logger.info("migration: users.can_view_invitee_channels added")
 
         if "user_periods" in tables:
