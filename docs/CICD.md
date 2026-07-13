@@ -121,6 +121,7 @@ chmod +x scripts/deploy-server.sh
 | Deploy 报 `Permission denied (publickey)` | 检查 `DEPLOY_KEY` 是否完整、`DEPLOY_USER` 是否正确 |
 | `git pull` 失败 | 服务器配置 GitHub 凭据或 Deploy Key |
 | 健康检查超时 | `docker compose logs api` 看启动错误；常见是 `.env` / 数据库问题 |
+| Deploy 报 `Process exited with status 56` | 多为部署脚本里 `curl` 检查 web(8080) 时连接被重置；已改为等待 web 就绪且不因 Caddy 重启失败而中断部署 |
 | 只改了前端但没更新 | `docker compose up -d --build` 会重建 `web` 镜像，确认 Deploy 日志无报错 |
 | 想先测 CI 不自动上线 | 暂时不配 Secrets，`CI` 仍会跑；`Deploy` 会因缺 Secret 失败 |
 

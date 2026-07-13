@@ -15,40 +15,65 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to Linux server
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
-          script_stop: true
+          command_timeout: 30m
+          script_stop: false
           script: |
+            bash -s <<'DEPLOY_EOF'
             set -euo pipefail
             cd "${{ secrets.DEPLOY_PATH }}"
+
+            echo "==> Pull latest main"
             git fetch origin main
             git reset --hard origin/main
+
+            echo "==> Rebuild and restart containers"
             docker compose up -d --build
-            echo "Waiting for API health..."
-            for i in $(seq 1 30); do
-              if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then
+
+            echo "==> Waiting for API health (8000)..."
+            api_ok=0
+            for i in $(seq 1 40); do
+              if curl -fsS --max-time 8 http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
                 echo "API healthy"
+                api_ok=1
                 break
               fi
               sleep 3
-              if [ "$i" -eq 30 ]; then
-                echo "Health check failed"
-                docker compose logs --tail=80 api
-                exit 1
-              fi
             done
-            if curl -fsS -o /dev/null http://127.0.0.1:8080/ 2>/dev/null; then
-              echo "Web on :8080 OK"
-            else
-              echo "WARN: web :8080 not responding"
-              docker compose ps
+            if [ "$api_ok" -ne 1 ]; then
+              echo "Health check failed"
+              docker compose logs --tail=80 api || true
+              exit 1
             fi
+
+            echo "==> Waiting for web (8080)..."
+            web_ok=0
+            for i in $(seq 1 30); do
+              if curl -fsS --max-time 8 -o /dev/null http://127.0.0.1:8080/ 2>/dev/null; then
+                echo "Web on :8080 OK"
+                web_ok=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$web_ok" -ne 1 ]; then
+              echo "WARN: web :8080 not ready yet"
+              docker compose ps || true
+            fi
+
             if command -v caddy >/dev/null 2>&1 && [ -f /etc/caddy/Caddyfile ]; then
-              sudo systemctl restart caddy || sudo systemctl start caddy || true
-              echo "Caddy restarted"
+              if sudo -n systemctl restart caddy 2>/dev/null || sudo systemctl restart caddy 2>/dev/null; then
+                echo "Caddy restarted"
+              else
+                echo "WARN: could not restart Caddy (deploy still OK)"
+              fi
             fi
+
+            docker compose ps || true
             echo "Deploy successful"
-            docker compose ps
+            exit 0
+            DEPLOY_EOF
