@@ -50,7 +50,7 @@ async function load() {
     inviteCode.value = me.invite_code
     invitePath.value = me.invite_path
     inviteeCount.value = me.invitee_count
-    if (cfg.view_users) {
+    if (cfg.view_channels) {
       invitees.value = await api.invitees() as InviteeRow[]
     } else {
       invitees.value = []
@@ -129,7 +129,7 @@ onMounted(load)
     <div class="topbar">
       <div>
         <h2>我的邀请</h2>
-        <p class="desc">分享邀请链接，管理受邀用户备注与渠道数据</p>
+        <p class="desc">分享邀请链接；查看受邀用户需管理员单独开通权限</p>
       </div>
     </div>
 
@@ -145,8 +145,10 @@ onMounted(load)
         </div>
       </div>
 
-      <div v-if="!config.view_users" class="card">
-        <div class="card-body"><p class="dim">管理员已关闭查看受邀用户，您仍可分享邀请链接。</p></div>
+      <div v-if="!config.view_channels" class="card">
+        <div class="card-body">
+          <p class="dim">您可分享上方邀请链接。查看受邀用户、备注与渠道数据需管理员在后台为您开通权限。</p>
+        </div>
       </div>
 
       <div v-else class="grid-2 invite-grid">
@@ -185,7 +187,7 @@ onMounted(load)
 
         <div class="card invite-detail">
           <div class="card-head">
-            <h3>{{ selectedInvitee ? selectedInvitee.nickname : '选择用户查看' }}</h3>
+            <h3>{{ selectedInvitee ? selectedInvitee.nickname : '受邀用户详情' }}</h3>
           </div>
           <div v-if="!selectedId" class="card-body"><p class="dim">点击左侧用户，设置备注并查看其渠道</p></div>
           <template v-else>
@@ -197,42 +199,37 @@ onMounted(load)
               </button>
             </div>
 
-            <div v-if="!config.view_channels" class="card-body channel-locked">
-              <p class="dim">渠道与自选记录未开放。默认仅可查看受邀用户信息与备注，如需查看渠道/股票请联系管理员开通权限。</p>
+            <div v-if="detailLoading && !selectedChannelId" class="empty"><strong>加载中…</strong></div>
+            <div v-else class="card-body">
+              <h4 class="sub-title">渠道（{{ channels.length }}）</h4>
+              <div v-if="channels.length" class="channel-mini-list">
+                <button
+                  v-for="ch in channels"
+                  :key="ch.id"
+                  type="button"
+                  class="channel-mini"
+                  :class="{ active: selectedChannelId === ch.id }"
+                  @click="selectChannel(ch)"
+                >
+                  <span class="tag" :style="{ '--tag-c': tagColor(ch.color) }">{{ ch.name }}</span>
+                  <span class="dim">{{ ch.record_count }} 条 · 胜率 {{ ch.win_rate != null ? `${Math.round(ch.win_rate)}%` : '—' }} · 均收益 {{ fmtPctVal(ch.avg_return) }}</span>
+                </button>
+              </div>
+              <p v-else class="dim">该用户暂无渠道</p>
             </div>
-            <template v-else>
-              <div v-if="detailLoading && !selectedChannelId" class="empty"><strong>加载中…</strong></div>
-              <div v-else class="card-body">
-                <h4 class="sub-title">渠道（{{ channels.length }}）</h4>
-                <div v-if="channels.length" class="channel-mini-list">
-                  <button
-                    v-for="ch in channels"
-                    :key="ch.id"
-                    type="button"
-                    class="channel-mini"
-                    :class="{ active: selectedChannelId === ch.id }"
-                    @click="selectChannel(ch)"
-                  >
-                    <span class="tag" :style="{ '--tag-c': tagColor(ch.color) }">{{ ch.name }}</span>
-                    <span class="dim">{{ ch.record_count }} 条 · 胜率 {{ ch.win_rate != null ? `${Math.round(ch.win_rate)}%` : '—' }} · 均收益 {{ fmtPctVal(ch.avg_return) }}</span>
-                  </button>
-                </div>
-                <p v-else class="dim">该用户暂无渠道</p>
-              </div>
 
-              <div v-if="selectedChannel" class="card only-table channel-records">
-                <div class="card-head">
-                  <h3>{{ selectedChannel.name }} · 自选记录（{{ records.length }}）</h3>
-                </div>
-                <RecTable
-                  :rows="records"
-                  :show-delete="false"
-                  :show-action="false"
-                  from="invite"
-                  empty-title="该渠道暂无自选"
-                />
+            <div v-if="selectedChannel" class="card only-table channel-records">
+              <div class="card-head">
+                <h3>{{ selectedChannel.name }} · 自选记录（{{ records.length }}）</h3>
               </div>
-            </template>
+              <RecTable
+                :rows="records"
+                :show-delete="false"
+                :show-action="false"
+                from="invite"
+                empty-title="该渠道暂无自选"
+              />
+            </div>
           </template>
         </div>
       </div>

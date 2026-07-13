@@ -352,7 +352,13 @@ def _lookup_name_individual_em(code: str) -> str | None:
 
 def lookup_stock_name(stock_code: str) -> str | None:
     code = _norm_stock_code(stock_code)
+    if len(code) != 6 or not code.isdigit():
+        return None
     try:
+        # 单股接口最准确，优先于批量列表（避免错配、创业板等漏查）
+        name = _lookup_name_individual_em(code)
+        if name:
+            return name
         maps: list[dict[str, str]] = []
         if code.startswith(("8", "4")):
             maps.append(_bj_code_name_map())
@@ -361,17 +367,11 @@ def lookup_stock_name(stock_code: str) -> str | None:
         else:
             maps.append(_sz_code_name_map())
         maps.append(_all_a_code_name_map())
-        maps.append(_sh_code_name_map())
-        maps.append(_sz_code_name_map())
-        maps.append(_bj_code_name_map())
         for m in maps:
-            name = m.get(code)
-            if name:
-                return name
+            hit = m.get(code)
+            if hit:
+                return hit
         name = _lookup_name_spot_em(code)
-        if name:
-            return name
-        name = _lookup_name_individual_em(code)
         if name:
             return name
     except Exception as exc:

@@ -28,6 +28,17 @@ from app.services.tracking import (
 
 router = APIRouter(prefix="/recommendations", tags=["自选"])
 
+_PLACEHOLDER_STOCK_NAMES = frozenset({"", "未知", "（未识别）"})
+
+
+def _resolve_stock_name(stock_code: str, client_name: str | None) -> str:
+    looked = lookup_stock_name(stock_code)
+    if looked:
+        return looked
+    if client_name and client_name.strip() not in _PLACEHOLDER_STOCK_NAMES:
+        return client_name.strip()
+    return "未知"
+
 
 def _resolve_recommend_price(db: DbSession, stock_code: str, recommend_date, price: float | None) -> float:
     if price is not None and price > 0:
@@ -240,7 +251,7 @@ def create_recommendation(body: RecommendationIn, user: CurrentUser, db: DbSessi
     if not channel:
         raise HTTPException(status_code=400, detail="请选择或输入渠道")
 
-    stock_name = body.stock_name or lookup_stock_name(body.stock_code) or "未知"
+    stock_name = _resolve_stock_name(body.stock_code, body.stock_name)
     stock_code = body.stock_code.strip()
     periods = ensure_user_periods(db, user.id)
     due_dates = [due_date_for_user_period(body.recommend_date, p) for p in periods]

@@ -394,8 +394,8 @@ def admin_set_invitee_channel_perm(user_id: int, body: InviteeChannelPermIn, db:
     user.can_view_invitee_channels = body.can_view_invitee_channels
     db.commit()
     if body.can_view_invitee_channels:
-        return MessageOut(message=f"已开通「{user.nickname}」查看受邀用户渠道与自选权限")
-    return MessageOut(message=f"已关闭「{user.nickname}」查看受邀用户渠道与自选权限")
+        return MessageOut(message=f"已开通「{user.nickname}」查看受邀用户权限")
+    return MessageOut(message=f"已关闭「{user.nickname}」查看受邀用户权限")
 
 
 @router.put("/users/{user_id}/password", response_model=MessageOut)

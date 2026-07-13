@@ -45,9 +45,10 @@ def _channel_stats(db, user_id: int, ch: Channel) -> ChannelStatsOut:
 
 @router.get("/config", response_model=InviteConfigOut)
 def invite_config(user: CurrentUser, db: DbSession):
+    can_view = invite_view_users(db) and can_inviter_view_channels(user)
     return InviteConfigOut(
-        view_users=invite_view_users(db),
-        view_channels=can_inviter_view_channels(user),
+        view_users=can_view,
+        view_channels=can_view,
     )
 
 
@@ -66,6 +67,8 @@ def my_invite(user: CurrentUser, db: DbSession):
 def my_invitees(user: CurrentUser, db: DbSession):
     if not invite_view_users(db):
         raise HTTPException(status_code=403, detail="管理员已关闭查看受邀用户")
+    if not can_inviter_view_channels(user):
+        raise HTTPException(status_code=403, detail="暂无查看受邀用户的权限，请联系管理员开通")
     return [InviteeOut(**x) for x in list_invitees(db, user.id)]
 
 
@@ -73,6 +76,8 @@ def my_invitees(user: CurrentUser, db: DbSession):
 def save_invitee_note(invitee_id: int, body: InviteeNoteIn, user: CurrentUser, db: DbSession):
     if not invite_view_users(db):
         raise HTTPException(status_code=403, detail="管理员已关闭查看受邀用户")
+    if not can_inviter_view_channels(user):
+        raise HTTPException(status_code=403, detail="暂无查看受邀用户的权限，请联系管理员开通")
     try:
         assert_can_view_invitee(db, user.id, invitee_id)
     except PermissionError as exc:

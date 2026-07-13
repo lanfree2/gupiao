@@ -2,8 +2,12 @@ export function fmtPrice(n: number) {
   return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+/** 展示日期，统一为 YYYY-MM-DD（含年份）。 */
 export function fmtDateShort(d: string) {
-  return d.length >= 10 ? d.slice(5) : d
+  if (!d) return '—'
+  const s = String(d).trim()
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
+  return s
 }
 
 /** 到期日是否已到（含当天），未到期不展示收益。 */

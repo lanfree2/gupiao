@@ -5,6 +5,7 @@ import { api } from '@/api/client'
 import { toast } from '@/utils/toast'
 import PeriodSettingsModal from '@/components/PeriodSettingsModal.vue'
 import { dueDateForPeriod, inferUnitFromLabel, periodUnitText } from '@/utils/periodCalc'
+import { fmtDateShort } from '@/utils/format'
 import type { ChannelStatsOut, PeriodOut } from '@/types/api'
 
 const NEW = '__new__'
@@ -25,6 +26,32 @@ const loading = ref(false)
 const showPeriodModal = ref(false)
 const nameTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 const priceTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+let nameLookupSeq = 0
+
+async function lookupName(code: string) {
+  const seq = ++nameLookupSeq
+  stockName.value = '识别中…'
+  try {
+    const res = await api.stockLookup(code) as { name?: string }
+    if (seq !== nameLookupSeq) return
+    const name = (res.name || '').trim()
+    stockName.value = name && name !== '（未识别）' ? name : '（未识别）'
+  } catch {
+    if (seq !== nameLookupSeq) return
+    stockName.value = '（未识别）'
+  }
+}
+
+watch(stockCode, (code) => {
+  if (nameTimer.value) clearTimeout(nameTimer.value)
+  const trimmed = code.trim()
+  if (!/^\d{6}$/.test(trimmed)) {
+    nameLookupSeq++
+    stockName.value = ''
+    return
+  }
+  nameTimer.value = setTimeout(() => lookupName(trimmed), 400)
+})
 
 const showNewChannel = computed(() => channelSel.value === NEW)
 const today = computed(() => new Date().toISOString().slice(0, 10))
@@ -48,19 +75,6 @@ async function loadMeta() {
   periods.value = ps
   if (chs.length && !channelSel.value) channelSel.value = String(chs[0].id)
 }
-
-watch(stockCode, (code) => {
-  if (nameTimer.value) clearTimeout(nameTimer.value)
-  if (!/^\d{6}$/.test(code.trim())) return
-  nameTimer.value = setTimeout(async () => {
-    try {
-      const res = await api.stockLookup(code.trim()) as { name?: string }
-      stockName.value = res.name || '未知'
-    } catch {
-      stockName.value = '未知'
-    }
-  }, 400)
-})
 
 watch([stockCode, recommendDate], () => {
   if (priceTimer.value) clearTimeout(priceTimer.value)
@@ -146,7 +160,7 @@ onMounted(loadMeta)
         <div class="card-body">
           <div class="form-group">
             <label>股票代码</label>
-            <input v-model="stockCode" class="form-control mono" inputmode="numeric" maxlength="6">
+            <input v-model="stockCode" class="form-control mono" inputmode="numeric" maxlength="6" @blur="() => { if (/^\d{6}$/.test(stockCode.trim())) lookupName(stockCode.trim()) }">
           </div>
           <div class="form-group">
             <label>股票名称</label>
@@ -204,7 +218,7 @@ onMounted(loadMeta)
               <tbody>
                 <tr v-for="t in timeline" :key="t.label">
                   <td>{{ t.label }}</td>
-                  <td class="mono">{{ t.due }}</td>
+                  <td class="mono">{{ fmtDateShort(t.due) }}</td>
                   <td :class="t.ready ? 'ready' : 'dim'">{{ t.ready ? '保存后立即抓取' : '待到期' }}</td>
                 </tr>
               </tbody>

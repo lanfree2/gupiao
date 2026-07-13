@@ -148,7 +148,7 @@ onMounted(async () => {
     <div class="topbar">
       <div>
         <h2>用户与邀请</h2>
-        <p class="desc">管理邀请关系、重置用户密码，按用户开通「查看受邀渠道/自选」权限</p>
+        <p class="desc">管理邀请关系、重置用户密码；按用户开通「查看受邀用户」权限（含备注、渠道与自选）</p>
       </div>
     </div>
 
@@ -161,7 +161,7 @@ onMounted(async () => {
         </label>
         <label class="agree">
           <input v-model="inviteViewUsers" type="checkbox">
-          <span>允许邀请人查看受邀用户列表（默认仅用户信息，不含渠道/自选）</span>
+          <span>允许邀请功能总开关（关闭后所有用户均不可查看受邀用户，仅可分享邀请链接）</span>
         </label>
         <button type="button" class="btn btn-primary" :disabled="savingSettings" @click="saveSettings">
           {{ savingSettings ? '保存中…' : '保存设置' }}
@@ -186,7 +186,7 @@ onMounted(async () => {
               <th>邀请码</th>
               <th>邀请人</th>
               <th class="num">受邀人数</th>
-              <th>受邀渠道权限</th>
+              <th>受邀查看权限</th>
               <th class="action"></th>
             </tr>
           </thead>
@@ -199,16 +199,14 @@ onMounted(async () => {
               <td class="num-cell">{{ u.invitee_count }}</td>
               <td>
                 <button
-                  v-if="u.invitee_count > 0"
                   type="button"
                   class="btn btn-sm"
                   :class="u.can_view_invitee_channels ? 'btn-primary' : 'btn-ghost'"
                   :disabled="togglingId === u.id"
                   @click="toggleInviteeChannels(u)"
                 >
-                  {{ togglingId === u.id ? '…' : (u.can_view_invitee_channels ? '已开通' : '未开通') }}
+                  {{ togglingId === u.id ? '…' : (u.can_view_invitee_channels ? '已开通' : '开通查看') }}
                 </button>
-                <span v-else class="dim">—</span>
               </td>
               <td class="action">
                 <button type="button" class="btn btn-sm btn-ghost" @click="openResetPwd(u)">重置密码</button>
@@ -221,7 +219,7 @@ onMounted(async () => {
           </tbody>
         </table>
       </div>
-      <p class="table-hint">短信找回密码关闭时，可在操作列为用户重置登录密码。受邀人数 &gt; 0 的用户可单独开通「查看受邀用户渠道与自选」。</p>
+      <p class="table-hint">需在平台设置中开启邀请总开关后，再为指定用户开通「受邀查看权限」。短信找回密码关闭时，可在操作列重置用户登录密码。</p>
     </div>
 
     <div class="modal-bg" :class="{ open: showResetPwd }" @click.self="showResetPwd = false">

@@ -29,7 +29,7 @@ def register_sms_required(db: Session) -> bool:
 
 
 def invite_view_users(db: Session) -> bool:
-    return get_bool(db, INVITE_VIEW_USERS, default=True)
+    return get_bool(db, INVITE_VIEW_USERS, default=False)
 
 
 def invite_view_channels(db: Session) -> bool:

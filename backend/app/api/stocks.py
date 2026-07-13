@@ -10,8 +10,11 @@ router = APIRouter(prefix="/stocks", tags=["股票"])
 
 @router.get("/lookup")
 def stock_lookup(code: str):
-    name = lookup_stock_name(code)
-    return {"code": code, "name": name or "（未识别）"}
+    norm = code.strip()
+    if len("".join(ch for ch in norm if ch.isdigit())) < 6:
+        raise HTTPException(status_code=400, detail="请输入 6 位股票代码")
+    name = lookup_stock_name(norm)
+    return {"code": norm.zfill(6)[-6:], "name": name or "（未识别）"}
 
 
 @router.get("/close")

@@ -174,7 +174,7 @@ onMounted(load)
           </div>
         </div>
         <div class="title-actions">
-          <span v-if="!editing" class="meta">开仓 {{ rec.recommend_date }} · ¥{{ fmtPrice(rec.recommend_price) }}</span>
+          <span v-if="!editing" class="meta">开仓 {{ fmtDateShort(rec.recommend_date) }} · ¥{{ fmtPrice(rec.recommend_price) }}</span>
           <div v-if="!editing" class="title-btns">
             <button type="button" class="btn btn-sm btn-ghost" @click="startEdit">编辑</button>
             <button
@@ -282,7 +282,7 @@ onMounted(load)
               <tr class="open-row">
                 <td>开仓</td>
                 <td class="mono">开仓</td>
-                <td class="td-date">{{ rec.recommend_date }}</td>
+                <td class="td-date">{{ fmtDateShort(rec.recommend_date) }}</td>
                 <td>已开仓</td>
                 <td class="price-cell">{{ fmtPrice(rec.recommend_price) }}</td>
                 <td class="num-cell"><span class="chip flat">基准</span></td>
@@ -290,7 +290,7 @@ onMounted(load)
               <tr v-for="node in nodesByDueDate" :key="node.id">
                 <td>{{ node.label }}</td>
                 <td>{{ node.label }}</td>
-                <td class="td-date">{{ node.due_date }}</td>
+                <td class="td-date">{{ fmtDateShort(node.due_date) }}</td>
                 <td>{{ nodeStatusLabel(node) }}</td>
                 <td class="price-cell">{{ isDueDateReached(node.due_date) && node.close_price != null ? fmtPrice(node.close_price) : '—' }}</td>
                 <td class="num-cell">
