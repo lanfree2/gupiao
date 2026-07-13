@@ -103,9 +103,8 @@ docker compose logs -f api
 ## 5. 验证部署
 
 1. 打开 `http://服务器IP/`
-2. 用户登录：`13888888888` / `demo123456`（seed 演示账号，生产可删）
-3. 管理后台：`http://服务器IP/admin/login`，使用 `.env` 中 `ADMIN_PHONE` / `ADMIN_PASSWORD`
-4. 健康检查：`curl http://localhost:8000/api/health`
+2. 使用 `.env` 中配置的管理员账号登录管理后台：`https://你的域名/admin/login`
+3. 健康检查：`curl http://localhost:8000/api/health`
 
 ---
 

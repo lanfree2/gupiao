@@ -11,10 +11,13 @@ settings = get_settings()
 
 
 def sms_config() -> dict:
+    mock_hint = None
+    if not settings.sms_enabled and settings.env != "production":
+        mock_hint = "演示模式：验证码固定为 " + settings.sms_mock_code
     return {
         "enabled": settings.sms_enabled,
         "mock_mode": not settings.sms_enabled,
-        "mock_hint": "演示模式：验证码固定为 " + settings.sms_mock_code if not settings.sms_enabled else None,
+        "mock_hint": mock_hint,
         "provider": settings.sms_provider,
     }
 

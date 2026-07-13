@@ -33,6 +33,55 @@ def create_tracking_nodes(db: Session, rec: Recommendation, periods: list[UserPe
     db.commit()
 
 
+def sync_tracking_nodes_for_user(db: Session, user_id: int) -> int:
+    """周期配置变更后，按 label 同步已有自选的到期日（交易日规则）。"""
+    periods = ensure_user_periods(db, user_id)
+    period_by_label = {p.label: p for p in periods}
+    recs = (
+        db.query(Recommendation)
+        .options(joinedload(Recommendation.nodes))
+        .filter(Recommendation.user_id == user_id)
+        .all()
+    )
+    touched = 0
+    for rec in recs:
+        existing_labels = {n.label for n in rec.nodes}
+        for node in rec.nodes:
+            p = period_by_label.get(node.label)
+            if not p:
+                continue
+            new_due = due_date_for_user_period(rec.recommend_date, p)
+            if node.due_date == new_due and node.days == p.days and node.sort_order == p.sort_order:
+                continue
+            node.due_date = new_due
+            node.days = p.days
+            node.sort_order = p.sort_order
+            node.status = NodeStatus.pending
+            node.close_price = None
+            node.pct_change = None
+            node.fetched_at = None
+            node.error_message = None
+            touched += 1
+        for p in periods:
+            if p.label in existing_labels:
+                continue
+            due = due_date_for_user_period(rec.recommend_date, p)
+            db.add(
+                TrackingNode(
+                    recommendation_id=rec.id,
+                    label=p.label,
+                    days=p.days,
+                    sort_order=p.sort_order,
+                    due_date=due,
+                    status=NodeStatus.pending,
+                )
+            )
+            touched += 1
+    if touched:
+        db.commit()
+    return touched
+
+
 def rebuild_tracking_nodes(db: Session, rec: Recommendation, user_id: int) -> None:
     """自选日期/价格变更后，按当前周期配置重建追踪节点。"""
     db.query(TrackingNode).filter(TrackingNode.recommendation_id == rec.id).delete()

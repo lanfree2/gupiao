@@ -12,26 +12,21 @@ const auth = useAuthStore()
 const { label, toggle } = useTheme()
 
 const tab = ref<'login' | 'register'>('login')
-const phone = ref('13888888888')
-const password = ref('demo123456')
+const phone = ref('')
+const password = ref('')
 const regPhone = ref('')
-const regCode = ref('')
 const regPass = ref('')
 const regPass2 = ref('')
 const regInvite = ref('')
-const smsRequired = ref(false)
+const smsEnabled = ref(false)
 const agree = ref(false)
 const error = ref('')
 const loading = ref(false)
-const mockHint = ref('')
-const codeCooldown = ref(0)
-let codeTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
   try {
     const cfg = await api.registerConfig()
-    smsRequired.value = cfg.sms_required
-    if (cfg.sms.mock_hint) mockHint.value = cfg.sms.mock_hint
+    smsEnabled.value = cfg.sms.enabled
   } catch { /* ignore */ }
   const invite = route.query.invite
   if (typeof invite === 'string' && invite.trim()) {
@@ -67,37 +62,11 @@ async function doLogin() {
   }
 }
 
-async function sendCode() {
-  const p = regPhone.value.trim()
-  if (!/^1\d{10}$/.test(p)) {
-    toast('请输入正确的 11 位手机号')
-    return
-  }
-  try {
-    await api.sendSms(p, 'register')
-    toast('验证码已发送')
-    codeCooldown.value = 60
-    if (codeTimer) clearInterval(codeTimer)
-    codeTimer = setInterval(() => {
-      codeCooldown.value--
-      if (codeCooldown.value <= 0 && codeTimer) clearInterval(codeTimer)
-    }, 1000)
-  } catch (e) {
-    toast(e instanceof Error ? e.message : '发送失败')
-  }
-}
-
 async function doRegister() {
   error.value = ''
   if (!/^1\d{10}$/.test(regPhone.value.trim())) {
     error.value = '请输入正确的手机号'
     return
-  }
-  if (smsRequired.value) {
-    if (regCode.value.trim().length !== 6) {
-      error.value = '请输入 6 位验证码'
-      return
-    }
   }
   if (regPass.value.length < 6) {
     error.value = '密码至少 6 位'
@@ -117,7 +86,6 @@ async function doRegister() {
       phone: regPhone.value.trim(),
       password: regPass.value,
     }
-    if (smsRequired.value || regCode.value.trim()) body.code = regCode.value.trim()
     if (regInvite.value.trim()) body.invite_code = regInvite.value.trim().toUpperCase()
     const res = await api.register(body)
     auth.setSession(res.access_token, res.user)
@@ -155,12 +123,15 @@ async function doRegister() {
 
         <div v-if="tab === 'login'">
           <h2>登录您的账户</h2>
-          <p class="sub">管理自选记录与渠道分析 · 演示 13888888888 / demo123456</p>
-          <div class="field"><label>手机号</label><input v-model="phone" type="tel" maxlength="11"></div>
-          <div class="field"><label>密码</label><input v-model="password" type="password"></div>
+          <p class="sub">管理自选记录与渠道分析</p>
+          <div class="field"><label>手机号</label><input v-model="phone" type="tel" maxlength="11" placeholder="请输入手机号"></div>
+          <div class="field"><label>密码</label><input v-model="password" type="password" placeholder="请输入密码"></div>
           <p v-if="error" class="error">{{ error }}</p>
           <button type="button" class="btn btn-primary btn-block" :disabled="loading" @click="doLogin">进入系统</button>
-          <p class="auth-switch">还没有账号？<a @click.prevent="tab = 'register'">立即注册</a> · <RouterLink to="/forgot-password">忘记密码</RouterLink></p>
+          <p class="auth-switch">
+            还没有账号？<a @click.prevent="tab = 'register'">立即注册</a>
+            <template v-if="smsEnabled"> · <RouterLink to="/forgot-password">忘记密码</RouterLink></template>
+          </p>
         </div>
 
         <div v-else class="register-panel">
@@ -172,45 +143,15 @@ async function doRegister() {
           </div>
           <div class="field">
             <label>设置密码</label>
-            <input
-              v-model="regPass"
-              type="password"
-              autocomplete="new-password"
-              placeholder="至少 6 位"
-              minlength="6"
-            >
+            <input v-model="regPass" type="password" autocomplete="new-password" placeholder="至少 6 位" minlength="6">
           </div>
           <div class="field">
             <label>确认密码</label>
-            <input
-              v-model="regPass2"
-              type="password"
-              autocomplete="new-password"
-              placeholder="再次输入密码"
-              minlength="6"
-            >
+            <input v-model="regPass2" type="password" autocomplete="new-password" placeholder="再次输入密码" minlength="6">
           </div>
           <div v-if="regInvite" class="field">
             <label>邀请码</label>
             <input v-model="regInvite" class="mono" readonly>
-          </div>
-          <div v-if="smsRequired" class="field">
-            <label>短信验证码</label>
-            <div class="code-row">
-              <input v-model="regCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6 位验证码" maxlength="6">
-              <button type="button" class="code-btn" :disabled="codeCooldown > 0" @click="sendCode">
-                {{ codeCooldown > 0 ? `${codeCooldown}s` : '获取验证码' }}
-              </button>
-            </div>
-            <p v-if="mockHint" class="form-hint">{{ mockHint }}</p>
-          </div>
-          <div v-else class="field">
-            <label>短信验证码（可选）</label>
-            <div class="code-row">
-              <input v-model="regCode" type="text" inputmode="numeric" placeholder="可不填" maxlength="6">
-              <button type="button" class="code-btn" :disabled="codeCooldown > 0" @click="sendCode">获取验证码</button>
-            </div>
-            <p class="form-hint">当前注册无需验证码；如需验证可自愿填写</p>
           </div>
           <label class="agree">
             <input v-model="agree" type="checkbox">

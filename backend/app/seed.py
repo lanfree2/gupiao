@@ -1,4 +1,4 @@
-"""数据库种子：管理员账号 + 演示用户（仅 development）。"""
+"""数据库种子：管理员账号（演示用户由 SEED_DEMO_USER 控制，生产请关闭）。"""
 from sqlalchemy.orm import Session
 
 from app.config import get_settings

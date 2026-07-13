@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     admin_phone: str = "13800000000"
     admin_password: str = "admin123"
     admin_nickname: str = "系统管理员"
-    seed_demo_user: bool = True
+    seed_demo_user: bool = False
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -7,8 +7,8 @@ import { toast } from '@/utils/toast'
 
 const router = useRouter()
 const auth = useAuthStore()
-const phone = ref('13800000000')
-const password = ref('admin123')
+const phone = ref('')
+const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
@@ -51,7 +51,7 @@ async function submit() {
       <div class="login-box">
         <div class="auth-brand"><div class="bt">嘉岭佰</div><small>管理后台</small></div>
         <h2>管理员登录</h2>
-        <p class="sub">仅限平台运营人员访问 · 演示 13800000000 / admin123</p>
+        <p class="sub">仅限平台运营人员访问</p>
         <div class="field"><label>管理员手机号</label><input v-model="phone" type="tel"></div>
         <div class="field"><label>密码</label><input v-model="password" type="password"></div>
         <p v-if="error" class="error">{{ error }}</p>

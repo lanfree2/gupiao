@@ -7,7 +7,7 @@
 - **用户端**：注册/登录、渠道管理、推荐录入、我的追踪、搜索、总览、修改密码、短信找回密码
 - **管理后台**：全站股票/渠道/推荐、分周期业绩统计
 - **Worker**：收盘后自动抓取节点涨跌幅（AKShare）
-- **短信开关**：`SMS_ENABLED=false` 时为演示模式，验证码固定为 `SMS_MOCK_CODE`
+- **短信开关**：`SMS_ENABLED=false` 时注册/找回密码不使用短信验证
 
 ## 快速开始
 
@@ -33,10 +33,9 @@ docker compose up -d --build
 
 > 若打开 `http://localhost` 显示 **Can't connect to server**，说明 Docker 未启动或未安装，请用方式 A 或先安装 Docker Desktop。
 
-| 角色 | 账号 | 默认密码 |
-|------|------|----------|
-| 演示用户 | 13888888888 | demo123456 |
-| 管理员 | 13800000000 | admin123（见 `.env` 中 `ADMIN_PASSWORD`）|
+| 角色 | 说明 |
+|------|------|
+| 管理员 | 见 `.env` 中 `ADMIN_PHONE` / `ADMIN_PASSWORD`（首次启动自动创建）|
 
 API 文档：http://localhost:8000/docs
 

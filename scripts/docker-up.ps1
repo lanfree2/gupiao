@@ -11,5 +11,5 @@ docker compose up -d --build
 Write-Host ""
 Write-Host "嘉岭佰已启动: http://localhost"
 Write-Host "API 文档:   http://localhost:8000/docs"
-Write-Host "演示账号:   13888888888 / demo123456"
+Write-Host "访问: http://localhost"
 Write-Host "管理后台:   http://localhost/admin/login"

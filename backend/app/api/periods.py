@@ -44,6 +44,9 @@ def replace_periods(body: list[PeriodIn], user: CurrentUser, db: DbSession):
         )
     db.commit()
     periods = db.query(UserPeriod).filter(UserPeriod.user_id == user.id).order_by(UserPeriod.sort_order).all()
+    from app.services.tracking import sync_tracking_nodes_for_user
+
+    sync_tracking_nodes_for_user(db, user.id)
     return [PeriodOut.model_validate(p) for p in periods]
 
 

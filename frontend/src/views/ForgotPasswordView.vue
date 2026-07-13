@@ -11,14 +11,14 @@ const newPassword = ref('')
 const confirm = ref('')
 const error = ref('')
 const loading = ref(false)
-const mockHint = ref('')
+const smsEnabled = ref(false)
 const codeCooldown = ref(0)
 let codeTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
   try {
     const cfg = await api.smsConfig()
-    if (cfg.mock_hint) mockHint.value = cfg.mock_hint
+    smsEnabled.value = cfg.enabled
   } catch { /* ignore */ }
 })
 
@@ -83,29 +83,35 @@ async function submit() {
       <div class="login-hero-inner">
         <div class="login-kicker">RESET PASSWORD</div>
         <h1>找回<br><em>账户密码</em></h1>
-        <p>通过短信验证码验证身份后，设置新密码。</p>
+        <p v-if="smsEnabled">通过短信验证码验证身份后，设置新密码。</p>
+        <p v-else>当前未开启短信服务，请联系管理员协助重置密码。</p>
       </div>
     </div>
     <div class="login-panel">
       <div class="login-box">
         <div class="auth-brand"><div class="bt">嘉岭佰</div><small>重置密码</small></div>
-        <h2>忘记密码</h2>
-        <p class="sub">输入注册手机号并完成短信验证</p>
-        <div class="field"><label>手机号</label><input v-model="phone" type="tel" maxlength="11"></div>
-        <div class="field">
-          <label>短信验证码</label>
-          <div class="code-row">
-            <input v-model="code" type="text" placeholder="6 位验证码" maxlength="6">
-            <button type="button" class="code-btn" :disabled="codeCooldown > 0" @click="sendCode">
-              {{ codeCooldown > 0 ? `${codeCooldown}s` : '获取验证码' }}
-            </button>
+        <template v-if="smsEnabled">
+          <h2>忘记密码</h2>
+          <p class="sub">输入注册手机号并完成短信验证</p>
+          <div class="field"><label>手机号</label><input v-model="phone" type="tel" maxlength="11"></div>
+          <div class="field">
+            <label>短信验证码</label>
+            <div class="code-row">
+              <input v-model="code" type="text" placeholder="6 位验证码" maxlength="6">
+              <button type="button" class="code-btn" :disabled="codeCooldown > 0" @click="sendCode">
+                {{ codeCooldown > 0 ? `${codeCooldown}s` : '获取验证码' }}
+              </button>
+            </div>
           </div>
-          <p v-if="mockHint" class="form-hint">{{ mockHint }}</p>
-        </div>
-        <div class="field"><label>新密码</label><input v-model="newPassword" type="password" placeholder="至少 6 位"></div>
-        <div class="field"><label>确认新密码</label><input v-model="confirm" type="password"></div>
-        <p v-if="error" class="error">{{ error }}</p>
-        <button type="button" class="btn btn-primary btn-block" :disabled="loading" @click="submit">重置密码</button>
+          <div class="field"><label>新密码</label><input v-model="newPassword" type="password" placeholder="至少 6 位"></div>
+          <div class="field"><label>确认新密码</label><input v-model="confirm" type="password"></div>
+          <p v-if="error" class="error">{{ error }}</p>
+          <button type="button" class="btn btn-primary btn-block" :disabled="loading" @click="submit">重置密码</button>
+        </template>
+        <template v-else>
+          <h2>暂不支持在线找回</h2>
+          <p class="sub">请返回登录页，或联系平台管理员处理。</p>
+        </template>
         <p class="auth-switch"><RouterLink to="/login">← 返回登录</RouterLink></p>
       </div>
     </div>
