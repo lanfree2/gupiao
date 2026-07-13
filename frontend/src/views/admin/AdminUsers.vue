@@ -29,6 +29,12 @@ const bindInviteCode = ref('')
 const bindInviterId = ref('')
 const binding = ref(false)
 
+const showResetPwd = ref(false)
+const resetUser = ref<AdminUser | null>(null)
+const resetPassword = ref('')
+const resetPassword2 = ref('')
+const resetting = ref(false)
+
 async function loadUsers() {
   loading.value = true
   try {
@@ -79,6 +85,35 @@ function openBind(user: AdminUser) {
   showBind.value = true
 }
 
+function openResetPwd(user: AdminUser) {
+  resetUser.value = user
+  resetPassword.value = ''
+  resetPassword2.value = ''
+  showResetPwd.value = true
+}
+
+async function submitResetPwd() {
+  if (!resetUser.value) return
+  if (resetPassword.value.length < 6) {
+    toast('新密码至少 6 位')
+    return
+  }
+  if (resetPassword.value !== resetPassword2.value) {
+    toast('两次输入的密码不一致')
+    return
+  }
+  resetting.value = true
+  try {
+    const res = await api.adminResetUserPassword(resetUser.value.id, resetPassword.value)
+    toast(res.message)
+    showResetPwd.value = false
+  } catch (e) {
+    toast(e instanceof Error ? e.message : '重置失败')
+  } finally {
+    resetting.value = false
+  }
+}
+
 async function submitBind() {
   if (!bindUserId.value) return
   binding.value = true
@@ -113,7 +148,7 @@ onMounted(async () => {
     <div class="topbar">
       <div>
         <h2>用户与邀请</h2>
-        <p class="desc">管理邀请关系，按用户开通「查看受邀渠道/自选」权限</p>
+        <p class="desc">管理邀请关系、重置用户密码，按用户开通「查看受邀渠道/自选」权限</p>
       </div>
     </div>
 
@@ -176,6 +211,7 @@ onMounted(async () => {
                 <span v-else class="dim">—</span>
               </td>
               <td class="action">
+                <button type="button" class="btn btn-sm btn-ghost" @click="openResetPwd(u)">重置密码</button>
                 <button type="button" class="btn btn-sm btn-ghost" @click="openBind(u)">绑定邀请人</button>
               </td>
             </tr>
@@ -185,7 +221,30 @@ onMounted(async () => {
           </tbody>
         </table>
       </div>
-      <p class="table-hint">受邀人数 &gt; 0 的用户可单独开通「查看受邀用户渠道与自选」；未开通时推荐者只能看用户信息与备注。</p>
+      <p class="table-hint">短信找回密码关闭时，可在操作列为用户重置登录密码。受邀人数 &gt; 0 的用户可单独开通「查看受邀用户渠道与自选」。</p>
+    </div>
+
+    <div class="modal-bg" :class="{ open: showResetPwd }" @click.self="showResetPwd = false">
+      <div class="modal">
+        <h3>重置用户密码</h3>
+        <p v-if="resetUser" class="modal-desc">
+          为「{{ resetUser.nickname }}」（{{ resetUser.phone }}）设置新登录密码，保存后立即生效。
+        </p>
+        <div class="form-group">
+          <label>新密码</label>
+          <input v-model="resetPassword" class="form-control" type="password" placeholder="至少 6 位" minlength="6">
+        </div>
+        <div class="form-group">
+          <label>确认新密码</label>
+          <input v-model="resetPassword2" class="form-control" type="password" placeholder="再次输入新密码" minlength="6">
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" @click="showResetPwd = false">取消</button>
+          <button type="button" class="btn btn-primary" :disabled="resetting" @click="submitResetPwd">
+            {{ resetting ? '保存中…' : '确认重置' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="modal-bg" :class="{ open: showBind }" @click.self="showBind = false">
@@ -213,4 +272,6 @@ onMounted(async () => {
 .modal-desc { color: var(--t2); font-size: 13px; margin: -12px 0 16px; line-height: 1.6; }
 .settings-block { display: flex; flex-direction: column; gap: 12px; }
 .table-hint { padding: 12px 22px 16px; font-size: 12px; color: var(--t3); margin: 0; }
+.action { white-space: nowrap; }
+.action .btn + .btn { margin-left: 6px; }
 </style>

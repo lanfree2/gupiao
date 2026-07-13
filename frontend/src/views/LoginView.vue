@@ -131,6 +131,7 @@ async function doRegister() {
           <p class="auth-switch">
             还没有账号？<a @click.prevent="tab = 'register'">立即注册</a>
             <template v-if="smsEnabled"> · <RouterLink to="/forgot-password">忘记密码</RouterLink></template>
+            <template v-else> · <span class="dim">忘记密码请联系管理员</span></template>
           </p>
         </div>
 

@@ -143,6 +143,8 @@ export const api = {
     api.put<{ message: string }>(`/admin/users/${userId}/inviter`, body),
   adminSetInviteeChannelPerm: (userId: number, enabled: boolean) =>
     api.put<{ message: string }>(`/admin/users/${userId}/invitee-channels`, { can_view_invitee_channels: enabled }),
+  adminResetUserPassword: (userId: number, new_password: string) =>
+    api.put<{ message: string }>(`/admin/users/${userId}/password`, { new_password }),
   adminSettings: () => api.get<{ register_sms_required: boolean; invite_view_users: boolean }>('/admin/settings'),
   adminSaveSettings: (body: { register_sms_required: boolean; invite_view_users: boolean }) =>
     api.put<{ message: string }>('/admin/settings', body),

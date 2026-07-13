@@ -1,12 +1,13 @@
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy.orm import joinedload
 
-from app.deps import CurrentAdmin, DbSession
+from app.deps import CurrentAdmin, DbSession, hash_password
 from app.models import Channel, NodeStatus, Recommendation, User, UserPeriod, UserRole
 from app.schemas import (
     AdminChannelOut,
     AdminSettingsIn,
     AdminSettingsOut,
+    AdminResetPasswordIn,
     AdminUserOut,
     BindInviterIn,
     IdIn,
@@ -395,6 +396,17 @@ def admin_set_invitee_channel_perm(user_id: int, body: InviteeChannelPermIn, db:
     if body.can_view_invitee_channels:
         return MessageOut(message=f"已开通「{user.nickname}」查看受邀用户渠道与自选权限")
     return MessageOut(message=f"已关闭「{user.nickname}」查看受邀用户渠道与自选权限")
+
+
+@router.put("/users/{user_id}/password", response_model=MessageOut)
+def admin_reset_user_password(user_id: int, body: AdminResetPasswordIn, db: DbSession, admin: CurrentAdmin):
+    """管理员重置普通用户密码（短信找回关闭时使用）。"""
+    user = db.query(User).filter(User.id == user_id, User.role == UserRole.user).first()
+    if not user:
+        raise HTTPException(404, detail="用户不存在")
+    user.password_hash = hash_password(body.new_password)
+    db.commit()
+    return MessageOut(message=f"已重置「{user.nickname}」的登录密码")
 
 
 @router.get("/settings", response_model=AdminSettingsOut)

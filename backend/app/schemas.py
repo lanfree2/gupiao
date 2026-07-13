@@ -130,6 +130,10 @@ class AdminSettingsIn(BaseModel):
     invite_view_users: bool = True
 
 
+class AdminResetPasswordIn(BaseModel):
+    new_password: str = Field(min_length=6, max_length=64)
+
+
 class InviteeChannelPermIn(BaseModel):
     can_view_invitee_channels: bool
 
