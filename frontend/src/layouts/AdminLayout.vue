@@ -45,7 +45,7 @@ function exitAdmin() {
         </RouterLink>
         <RouterLink to="/admin/users" class="nav-link" :class="{ active: navActive('/admin/users') }">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-          用户邀请
+          用户业绩
         </RouterLink>
         <div class="theme-switch">
           <span>{{ label }}</span>

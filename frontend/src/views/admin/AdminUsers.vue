@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
+import { fmtPctVal } from '@/utils/format'
 import { toast } from '@/utils/toast'
 
 interface AdminUser {
@@ -13,7 +15,15 @@ interface AdminUser {
   invitee_count: number
   can_view_invitee_channels: boolean
   created_at: string
+  record_count: number
+  channel_count: number
+  stock_count: number
+  win_rate: number | null
+  avg_return: number | null
+  pending_nodes: number
 }
+
+const router = useRouter()
 
 const q = ref('')
 const users = ref<AdminUser[]>([])
@@ -148,7 +158,7 @@ onMounted(async () => {
     <div class="topbar">
       <div>
         <h2>用户与邀请</h2>
-        <p class="desc">管理邀请关系、重置用户密码；按用户开通「查看受邀用户」权限（含备注、渠道与自选）</p>
+        <p class="desc">查看用户业绩、管理邀请关系与重置密码；按用户开通「查看受邀用户」权限</p>
       </div>
     </div>
 
@@ -183,21 +193,25 @@ onMounted(async () => {
             <tr>
               <th>昵称</th>
               <th>手机号</th>
-              <th>邀请码</th>
-              <th>邀请人</th>
-              <th class="num">受邀人数</th>
-              <th>受邀查看权限</th>
+              <th class="num">自选</th>
+              <th class="num">渠道</th>
+              <th class="num">胜率</th>
+              <th class="num">均收益</th>
+              <th class="num">受邀</th>
+              <th>受邀查看</th>
               <th class="action"></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="u in users" :key="u.id">
-              <td>{{ u.nickname }}</td>
+            <tr v-for="u in users" :key="u.id" class="clickable" @click="router.push(`/admin/users/${u.id}`)">
+              <td><strong>{{ u.nickname }}</strong></td>
               <td class="mono">{{ u.phone }}</td>
-              <td class="mono">{{ u.invite_code || '—' }}</td>
-              <td>{{ u.inviter_nickname || '—' }}</td>
+              <td class="num-cell">{{ u.record_count }}</td>
+              <td class="num-cell">{{ u.channel_count }}</td>
+              <td class="num-cell">{{ u.win_rate != null ? `${Math.round(u.win_rate)}%` : '—' }}</td>
+              <td class="num-cell" :class="u.avg_return != null ? (u.avg_return >= 0 ? 'up' : 'down') : ''">{{ fmtPctVal(u.avg_return) }}</td>
               <td class="num-cell">{{ u.invitee_count }}</td>
-              <td>
+              <td @click.stop>
                 <button
                   type="button"
                   class="btn btn-sm"
@@ -208,18 +222,19 @@ onMounted(async () => {
                   {{ togglingId === u.id ? '…' : (u.can_view_invitee_channels ? '已开通' : '开通查看') }}
                 </button>
               </td>
-              <td class="action">
+              <td class="action" @click.stop>
+                <button type="button" class="btn btn-sm btn-primary" @click="router.push(`/admin/users/${u.id}`)">业绩</button>
                 <button type="button" class="btn btn-sm btn-ghost" @click="openResetPwd(u)">重置密码</button>
                 <button type="button" class="btn btn-sm btn-ghost" @click="openBind(u)">绑定邀请人</button>
               </td>
             </tr>
             <tr v-if="!users.length">
-              <td colspan="7"><div class="empty"><strong>暂无用户</strong></div></td>
+              <td colspan="9"><div class="empty"><strong>暂无用户</strong></div></td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p class="table-hint">需在平台设置中开启邀请总开关后，再为指定用户开通「受邀查看权限」。短信找回密码关闭时，可在操作列重置用户登录密码。</p>
+      <p class="table-hint">点击用户行或「业绩」可查看与用户端一致的多维度统计。邀请总开关开启后，可为指定用户开通「受邀查看权限」。</p>
     </div>
 
     <div class="modal-bg" :class="{ open: showResetPwd }" @click.self="showResetPwd = false">

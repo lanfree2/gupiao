@@ -37,6 +37,7 @@ const router = createRouter({
         { path: 'channels/:id', component: () => import('@/views/admin/AdminChannelDetail.vue') },
         { path: 'records', component: () => import('@/views/admin/AdminRecords.vue') },
         { path: 'users', component: () => import('@/views/admin/AdminUsers.vue') },
+        { path: 'users/:id', component: () => import('@/views/admin/AdminUserDetail.vue') },
       ],
     },
   ],

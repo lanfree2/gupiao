@@ -104,7 +104,7 @@ async function doRegister() {
     <div class="login-hero">
       <div class="login-hero-inner">
         <div class="login-kicker">JIALINGBAI · TRACK EVERY CALL</div>
-        <h1>每一条荐股，<br>都留下<em>可验证的足迹</em></h1>
+        <h1>每一条自选，<br>都留下<em>可验证的足迹</em></h1>
         <p>把各个渠道的股票自选录进来，系统自动追踪走势。时间久了，哪个消息来源靠谱，数据自己会说话。</p>
         <div class="login-feats">
           <div class="login-feat"><span class="no">01</span><div><strong>我的渠道分类</strong><span>按自己的消息来源建组，独立统计每个渠道的胜率</span></div></div>

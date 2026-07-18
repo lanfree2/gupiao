@@ -23,8 +23,10 @@ from app.services.app_settings import (
     register_sms_required,
     set_bool,
 )
+from app.services.dashboard_stats import build_user_dashboard, summarize_user_recs
 from app.services.invites import ensure_invite_code, find_user_by_invite_code
-from app.services.stats import all_node_values, collect_node_values, rec_to_out, stats_from_values
+from app.services.period_calc import DEFAULT_PERIODS
+from app.services.stats import all_node_values, collect_node_values, count_due_pending_nodes, rec_to_out, stats_from_values
 from app.services.tracking import ensure_user_periods
 
 router = APIRouter(prefix="/admin", tags=["管理后台"])
@@ -32,21 +34,89 @@ router = APIRouter(prefix="/admin", tags=["管理后台"])
 
 @router.get("/dashboard")
 def admin_dashboard(db: DbSession, admin: CurrentAdmin):
-    users = db.query(User).filter(User.role == UserRole.user).count()
+    users = db.query(User).filter(User.role == UserRole.user).all()
     recs = (
         db.query(Recommendation)
         .options(joinedload(Recommendation.nodes), joinedload(Recommendation.channel), joinedload(Recommendation.user))
         .all()
     )
-    stocks = len({r.stock_code for r in recs})
     all_vals = all_node_values(recs)
-    win_rate, _ = stats_from_values(all_vals)
-    recent = sorted(recs, key=lambda r: r.created_at, reverse=True)[:5]
+    win_rate, avg_return = stats_from_values(all_vals)
+    pending = count_due_pending_nodes(recs)
+
+    labels: list[str] = []
+    seen: set[str] = set()
+    for p in db.query(UserPeriod).order_by(UserPeriod.user_id, UserPeriod.sort_order).all():
+        if p.label not in seen:
+            labels.append(p.label)
+            seen.add(p.label)
+    if not labels:
+        labels = [lab for lab, _, _ in DEFAULT_PERIODS]
+
+    period_stats = []
+    for label in labels[:8]:
+        vals = collect_node_values(recs, label)
+        wr, ar = stats_from_values(vals)
+        period_stats.append({"label": label, "sample": len(vals), "win_rate": wr, "avg_return": ar})
+
+    by_user: dict[int, list] = {}
+    for r in recs:
+        by_user.setdefault(r.user_id, []).append(r)
+    user_rank = []
+    for u in users:
+        urecs = by_user.get(u.id, [])
+        summary = summarize_user_recs(urecs)
+        if summary["record_count"] == 0:
+            continue
+        user_rank.append(
+            {
+                "user_id": u.id,
+                "nickname": u.nickname,
+                "phone": u.phone,
+                **summary,
+            }
+        )
+    user_rank.sort(key=lambda x: (-(x["win_rate"] or -1), -(x["record_count"])))
+
+    channel_rank = []
+    channels = (
+        db.query(Channel)
+        .options(joinedload(Channel.user))
+        .filter(Channel.is_active.is_(True))
+        .all()
+    )
+    for ch in channels:
+        ch_recs = [r for r in recs if r.channel_id == ch.id]
+        if not ch_recs:
+            continue
+        vals = all_node_values(ch_recs)
+        wr, ar = stats_from_values(vals)
+        channel_rank.append(
+            {
+                "channel_id": ch.id,
+                "name": ch.name,
+                "color": ch.color,
+                "user_id": ch.user_id,
+                "user_nickname": ch.user.nickname if ch.user else "",
+                "record_count": len(ch_recs),
+                "win_rate": wr,
+                "avg_return": ar,
+            }
+        )
+    channel_rank.sort(key=lambda x: (-(x["win_rate"] or -1), -x["record_count"]))
+
+    recent = sorted(recs, key=lambda r: r.created_at, reverse=True)[:8]
     return {
-        "user_count": users,
+        "user_count": len(users),
         "record_count": len(recs),
-        "stock_count": stocks,
+        "stock_count": len({r.stock_code for r in recs}),
+        "channel_count": len(channels),
         "win_rate": win_rate,
+        "avg_return": avg_return,
+        "pending_nodes": pending,
+        "period_stats": period_stats,
+        "user_rank": user_rank[:10],
+        "channel_rank": channel_rank[:10],
         "recent": [
             {
                 **rec_to_out(r),
@@ -61,8 +131,15 @@ def admin_dashboard(db: DbSession, admin: CurrentAdmin):
 @router.get("/stocks", response_model=list[StockAggOut])
 def admin_stocks(db: DbSession, admin: CurrentAdmin, q: str | None = None):
     recs = db.query(Recommendation).options(joinedload(Recommendation.nodes)).all()
-    sample = db.query(UserPeriod).order_by(UserPeriod.sort_order).first()
-    plen = db.query(UserPeriod).filter(UserPeriod.user_id == sample.user_id).count() if sample else 5
+    labels: list[str] = []
+    seen: set[str] = set()
+    for p in db.query(UserPeriod).order_by(UserPeriod.user_id, UserPeriod.sort_order).all():
+        if p.label not in seen:
+            labels.append(p.label)
+            seen.add(p.label)
+    if not labels:
+        labels = [lab for lab, _, _ in DEFAULT_PERIODS]
+    labels = labels[:5]
 
     groups: dict[str, list] = {}
     for r in recs:
@@ -74,10 +151,12 @@ def admin_stocks(db: DbSession, admin: CurrentAdmin, q: str | None = None):
     for code, items in groups.items():
         users = len({r.user_id for r in items})
         period_avgs = []
-        for i in range(plen):
-            vals = collect_node_values(items, p.label)
+        for label in labels:
+            vals = collect_node_values(items, label)
             _, avg = stats_from_values(vals)
             period_avgs.append(avg)
+        all_vals = all_node_values(items)
+        wr, ar = stats_from_values(all_vals)
         result.append(
             StockAggOut(
                 stock_code=code,
@@ -85,6 +164,9 @@ def admin_stocks(db: DbSession, admin: CurrentAdmin, q: str | None = None):
                 count=len(items),
                 user_count=users,
                 period_avgs=period_avgs,
+                period_labels=labels,
+                win_rate=wr,
+                avg_return=ar,
             )
         )
     result.sort(key=lambda x: -x.count)
@@ -327,6 +409,15 @@ def admin_users(db: DbSession, admin: CurrentAdmin, q: str = ""):
         .order_by(User.created_at.desc())
         .all()
     )
+    all_recs = (
+        db.query(Recommendation)
+        .options(joinedload(Recommendation.nodes))
+        .all()
+    )
+    by_user: dict[int, list] = {}
+    for r in all_recs:
+        by_user.setdefault(r.user_id, []).append(r)
+
     ql = q.strip().lower()
     result = []
     for u in users:
@@ -341,6 +432,7 @@ def admin_users(db: DbSession, admin: CurrentAdmin, q: str = ""):
             if not matched:
                 continue
         invitee_count = db.query(User).filter(User.invited_by_id == u.id).count()
+        summary = summarize_user_recs(by_user.get(u.id, []))
         result.append(
             AdminUserOut(
                 id=u.id,
@@ -352,9 +444,34 @@ def admin_users(db: DbSession, admin: CurrentAdmin, q: str = ""):
                 invitee_count=invitee_count,
                 can_view_invitee_channels=bool(u.can_view_invitee_channels),
                 created_at=u.created_at,
+                record_count=summary["record_count"],
+                channel_count=summary["channel_count"],
+                stock_count=summary["stock_count"],
+                win_rate=summary["win_rate"],
+                avg_return=summary["avg_return"],
+                pending_nodes=summary["pending_nodes"],
             )
         )
     return result
+
+
+@router.get("/users/{user_id}/dashboard")
+def admin_user_dashboard(user_id: int, db: DbSession, admin: CurrentAdmin):
+    """查看指定用户的完整总览统计（与用户端总览同维度）。"""
+    user = db.query(User).filter(User.id == user_id, User.role == UserRole.user).first()
+    if not user:
+        raise HTTPException(404, detail="用户不存在")
+    data = build_user_dashboard(db, user.id)
+    return {
+        "user": {
+            "id": user.id,
+            "nickname": user.nickname,
+            "phone": user.phone,
+            "invite_code": user.invite_code,
+            "created_at": user.created_at,
+        },
+        **data,
+    }
 
 
 @router.put("/users/{user_id}/inviter", response_model=MessageOut)

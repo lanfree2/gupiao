@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { fmtPctVal } from '@/utils/format'
@@ -10,12 +10,17 @@ interface StockAgg {
   count: number
   user_count: number
   period_avgs: (number | null)[]
+  period_labels: string[]
+  win_rate: number | null
+  avg_return: number | null
 }
 
 const router = useRouter()
 const q = ref('')
 const rows = ref<StockAgg[]>([])
 const loading = ref(true)
+
+const periodLabels = computed(() => rows.value[0]?.period_labels ?? [])
 
 async function load() {
   loading.value = true
@@ -40,7 +45,7 @@ onMounted(load)
     <div class="topbar">
       <div>
         <h2>全站股票</h2>
-        <p class="desc">按代码聚合的自选统计</p>
+        <p class="desc">按代码聚合的自选与各周期平均收益</p>
       </div>
     </div>
 
@@ -59,7 +64,9 @@ onMounted(load)
               <th>名称</th>
               <th class="num">自选次数</th>
               <th class="num">用户数</th>
-              <th v-for="(_, i) in rows[0]?.period_avgs ?? []" :key="i" class="num">周期{{ i + 1 }}</th>
+              <th class="num">胜率</th>
+              <th class="num">均收益</th>
+              <th v-for="label in periodLabels" :key="label" class="num">{{ label }}</th>
             </tr>
           </thead>
           <tbody>
@@ -73,10 +80,12 @@ onMounted(load)
               <td>{{ s.stock_name }}</td>
               <td class="num-cell">{{ s.count }}</td>
               <td class="num-cell">{{ s.user_count }}</td>
+              <td class="num-cell">{{ s.win_rate != null ? `${Math.round(s.win_rate)}%` : '—' }}</td>
+              <td class="num-cell" :class="s.avg_return != null ? (s.avg_return >= 0 ? 'up' : 'down') : ''">{{ fmtPctVal(s.avg_return) }}</td>
               <td v-for="(avg, i) in s.period_avgs" :key="i" class="num-cell">{{ fmtPctVal(avg) }}</td>
             </tr>
             <tr v-if="!rows.length">
-              <td colspan="4"><div class="empty"><strong>暂无数据</strong></div></td>
+              <td :colspan="6 + periodLabels.length"><div class="empty"><strong>暂无数据</strong></div></td>
             </tr>
           </tbody>
         </table>

@@ -1,12 +1,13 @@
 ﻿<script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api, chipClass, fmtPct } from '@/api/client'
 import { tagColor } from '@/utils/colors'
 import { fmtDateShort, fmtPrice } from '@/utils/format'
 import type { RecommendationOut } from '@/types/api'
 
 const router = useRouter()
+const route = useRoute()
 const q = ref('')
 const scope = ref<'all' | 'stock' | 'channel' | 'user'>('all')
 const rows = ref<RecommendationOut[]>([])
@@ -34,7 +35,13 @@ watch([q, scope], () => {
   timer = setTimeout(load, 300)
 })
 
-load()
+onMounted(() => {
+  const qq = route.query.q
+  const qs = route.query.scope
+  if (typeof qq === 'string' && qq.trim()) q.value = qq.trim()
+  if (qs === 'stock' || qs === 'channel' || qs === 'user' || qs === 'all') scope.value = qs
+  load()
+})
 </script>
 
 <template>

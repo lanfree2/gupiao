@@ -118,6 +118,12 @@ class AdminUserOut(BaseModel):
     invitee_count: int
     can_view_invitee_channels: bool = False
     created_at: datetime
+    record_count: int = 0
+    channel_count: int = 0
+    stock_count: int = 0
+    win_rate: float | None = None
+    avg_return: float | None = None
+    pending_nodes: int = 0
 
 
 class AdminSettingsOut(BaseModel):
@@ -254,6 +260,9 @@ class StockAggOut(BaseModel):
     count: int
     user_count: int
     period_avgs: list[float | None]
+    period_labels: list[str] = []
+    win_rate: float | None = None
+    avg_return: float | None = None
 
 
 class AdminChannelOut(BaseModel):

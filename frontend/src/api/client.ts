@@ -139,6 +139,7 @@ export const api = {
   runWorker: () => api.post('/admin/worker/run'),
   adminDeleteRec: (id: number) => deleteWithFallback(id, 'admin-rec'),
   adminUsers: (q?: string) => api.get(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  adminUserDashboard: (userId: number) => api.get(`/admin/users/${userId}/dashboard`),
   adminBindInviter: (userId: number, body: { inviter_id?: number | null; invite_code?: string | null }) =>
     api.put<{ message: string }>(`/admin/users/${userId}/inviter`, body),
   adminSetInviteeChannelPerm: (userId: number, enabled: boolean) =>
